@@ -1,29 +1,23 @@
-import { ReadAccess } from "./access";
+import { DerivedStateCfg, InitializeStateCfg } from "./configurations";
 import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
 import { PromiseExt } from "./PromiseExt";
 import { Qualifier } from "./Qualifier";
-import { SerializationCfg } from "./SerializationCfg";
 import { StateBase } from "./StateBase";
-import { ValueStore } from "./ValueStore";
 import { ValueAccessWithDeps } from "./ValueAccessWithDeps";
-
-export interface DerivedStateCfg<T> {
-    readonly derive: (access: ReadAccess, q: Qualifier) => T | Promise<T>;
-    readonly pickler?: SerializationCfg<T>;
-}
+import { ValueStore } from "./ValueStore";
 
 export class DerivedState<T> extends StateBase<T> {
     public constructor(key: string, hmrToken: object, protected readonly cfg: DerivedStateCfg<T>) {
         super(key, hmrToken);
     }
 
-    public pickler(): SerializationCfg<T> | undefined {
-        return this.cfg.pickler;
+    protected initCfg(): InitializeStateCfg<T> {
+        throw new Error("Unsupported in derived state");
     }
-    
+
     public get(data: DataStore): FutureResource<T> {
-        const store = data.findWithCached<T>(this.key, q, this.pickler());
+        const store = data.findWithCached<T>(this.key, this.cfg.pickler);
         //console.log(`get ${this.key} ${q}`, store.invalid, store.value.state);
         if (store.invalid) {
             const access = new ValueAccessWithDeps(data, store);
@@ -39,7 +33,7 @@ export class DerivedState<T> extends StateBase<T> {
                 }
             }
         }
-        data.note(this, q);
+        data.note(this);
         return store.promise;
     }
 

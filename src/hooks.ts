@@ -1,10 +1,12 @@
 import { DependencyList, useContext, useEffect, useState } from "react";
 import { CallbackAccess } from "./access";
 import { DataStoreContext } from "./DataStoreContext";
-import { FutureValue, MaybeFutureMaterial } from "./FutureValue";
+import { FutureResource } from "./FutureResource";
+import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
 import { ReadableState } from "./ReadableState";
 import { SettableState } from "./SettableState";
 import { fail } from "./utils";
+import { ValueAccess } from "./ValueAccess";
 
 //TODO: useSyncExternalStore
 
@@ -50,16 +52,67 @@ export function useDataCallback<A extends any[]>(f: (access: CallbackAccess, ...
     const store =  useDataStore();
     return (...args) => {
         try {
-            const access: CallbackAccess = {
-                value: <T>(state: ReadableState<T>) => fail("Unimplemented"),
-                set: <T>(state: SettableState<T>, value: MaybeFutureMaterial<T>) => fail("Unimplemented"),
-                refresh: (state: ReadableState<any>) => fail("Unimplemented"),
-            };
-            f(access, ...args);
-            //notify subscribers
+            const access = new ValueAccess(store);
+            store.startBatch();
+            try {
+                f(access.toCallbackAccess(), ...args);
+            } finally {
+                store.endBatch();
+            }
         } catch (e) {
             if (e instanceof Promise) throw new Error("Promise signalling is not allowed in callback");
             throw e;
         }
     };
+}
+
+/**
+ * Triggers component re-render when provided future is settled. It is expected that during re-rendering
+ * source of the future value will return settled value.
+ * @param value future value to be awaited.
+ */
+export function useFutureValue<T>(value: MaybeFutureValue<T>): void {
+    const [, setObj] = useState({});
+    useEffect(() => {
+        let canceled = false;
+        if (value.state !== "pending") return;
+        const trigger = () => {if (!canceled) setObj({})}
+        value.promise.then(trigger, trigger);
+        return () => {
+            canceled = true;
+        };
+    }, [value]);
+}
+
+export function useFutureResource<T>(): [current: MaybeFutureValue<T>, last: T | undefined, setter: (mat: FutureMaterial<T>) => void];
+export function useFutureResource<T, D=T>(init: D): [current: MaybeFutureValue<T>, last: T | D, setter: (mat: FutureMaterial<T>) => void];
+export function useFutureResource<T, D=T>(init: D, start: () => FutureMaterial<T>): [current: FutureValue<T>, last: T | D, setter: (mat: FutureMaterial<T>) => void];
+export function useFutureResource<T, D=undefined>(init?: D, start?: () => FutureMaterial<T>): [current: MaybeFutureValue<T>, last: T | D, setter: (mat: FutureMaterial<T>) => void] {
+
+    function wrap(mat: FutureMaterial<T>): FutureResource<T> {
+        const fv = FutureValue.wrap(mat);
+        return FutureResource.wrap(fv);
+    }
+
+    function startFun() {
+        if (!start) return undefined;
+        return wrap(start());
+    }
+
+    const [res, setRes] = useState<FutureResource<T> | undefined>(startFun);
+    const [last, setLast] = useState<T | D | undefined>(init);
+
+    useEffect(() => {
+        if (res) return () => res.cancel();
+    }, [res]);
+ 
+    useFutureValue(res ? res.current() : FutureValue.noValue);
+
+    function setResource(mat: FutureMaterial<T>): void {
+        const prev = res ? res.current() : FutureValue.noValue;
+        if (prev.state === "present") setLast(prev.value);
+        setRes(wrap(mat));
+    }
+
+    return [res ? res.current() : FutureValue.noValue, last!, setResource];
 }

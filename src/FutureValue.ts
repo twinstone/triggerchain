@@ -11,12 +11,14 @@ export interface MaybeFutureValueBase<T> {
     toValue(): T;
     valueOr<R>(def: R): T | R;
     settled(): SettledValue<T>;
-    settledOr(other: T | SettledValue<T>): SettledValue<T>;
-    or(other: FutureMaterial<T>): FutureValue<T>;
+    settledOr<R>(other: R | SettledValue<R>): SettledValue<T | R>;
+    or<R>(other: FutureMaterial<R>): FutureValue<T | R>;
+    then<R>(f: (settled: SettledValue<T>) => FutureMaterial<R>): MaybeFutureValue<R>;
 }
 
 interface FutureValueBase<T> extends MaybeFutureValueBase<T> {
     map<R>(f: (v: T) => FutureMaterial<R>): FutureValue<R>
+    then<R>(f: (settled: SettledValue<T>) => FutureMaterial<R>): FutureValue<R>;
 }
 
 export interface PendingValue<T> extends FutureValueBase<T> {
@@ -75,8 +77,9 @@ export namespace FutureValue {
         toValue: () => { throw new Error("No Value") },
         valueOr: <R>(def: R) => def,
         settled: () => { throw new Error("No Value") },
-        settledOr: (other: SettledValue<never>) => other,
-        or: (other: FutureMaterial<never>) => wrap(other)
+        settledOr: <R>(other: R | SettledValue<R>) => isSettled(other) ? other : fromValue<R>(other),
+        or: <R>(other: FutureMaterial<R>) => wrap(other),
+        then: <R>(f: (settled: SettledValue<never>) => FutureMaterial<R>) => noValue,
     };
 
     export function hasNoValue(v: unknown): v is NoValue {
@@ -96,7 +99,11 @@ export namespace FutureValue {
     }
 
     export function isMaybe(v: unknown): v is MaybeFutureValue<any> {
-        return typeof futureValueTag === "object" && !!v && (futureValueTag in v) && v[futureValueTag];
+        if (typeof v === "object" && !!v) {
+            const o: object = v;
+            return (futureValueTag in o) && (o as any)[futureValueTag];
+        }
+        return false;
     }
 
     export function is(v: unknown): v is FutureValue<any> {
@@ -117,23 +124,47 @@ export namespace FutureValue {
             toPromise: () => prom,
             toValue: () => value,
             settled: () => ret,
-            settledOr: (other: T | SettledValue<T>) => ret,
-            or: (other: FutureMaterial<T>) => ret,
+            settledOr: <R>(other: R | SettledValue<R>) => ret,
+            or: <R>(other: FutureMaterial<R>) => ret,
             valueOr: <R>(other: R) => value,
-            map: function<R>(f: (v: T) => FutureMaterial<R>) {
-                try {
-                    return wrap<R>(f(value));
-                } catch (err) {
-                    return fromError<R>(err);
-                }
-            },
-
+            //Need to use 'as' because of overloaded method defintion. 
+            map: <R>(f: (v: T) => FutureMaterial<R>) => tryFutureValue(() => f(value)),
+            then: <R>(f: (settled: SettledValue<T>) => FutureMaterial<R>) => tryFutureValue(() => f(ret)), 
         };
+        const z = ret.map(() => tryFutureValue(() => 7));
         return ret;
     }
     
     export function fromPromise<T>(value: Promise<T> | CancelablePromise<T>): PendingValue<T> {
         const promise = makeCancelable(value);
+        
+        function thenFn<R>(f: (v: SettledValue<T>) => FutureMaterial<R>): FutureValue<R> {
+            const abort = new AbortController();
+            abort.signal.addEventListener("abort", () => cancelPromise(promise));
+            const res = value.then(
+                v => {
+                    const fv = wrap<R>(f(fromValue(v)));
+                    const fvc = makeCancelable(fv.toPromise());
+                    abort.signal.addEventListener("abort", () => cancelPromise(fvc));
+                    return fvc;
+                },
+                err => {
+                    const fv = wrap<R>(f(fromError(err)));
+                    const fvc = makeCancelable(fv.toPromise());
+                    abort.signal.addEventListener("abort", () => cancelPromise(fvc));
+                    return fvc;
+                }
+            );
+            return fromPromise<R>(makeCancelable(res, abort));
+        }
+
+        function mapFn<R>(f: (v: T) => FutureMaterial<R>): FutureValue<R> {
+            return thenFn(fv => {
+                if (fv.state === "error") return fv;
+                return f(fv.value);
+            });
+        }
+
         const ret: PendingValue<T> = {
            [futureValueTag]: true,
            state: "pending",
@@ -141,20 +172,11 @@ export namespace FutureValue {
            isSettled: false,
            toPromise: () => promise,
            toValue: () => { throw new Error("Pending value") },
-           map: <R>(f: (v: T) => FutureMaterial<R>) => {
-            const abort = new AbortController();
-            abort.signal.addEventListener("abort", () => cancelPromise(promise));
-            const res = value.then(v => {
-                const fv = wrap<R>(f(v));
-                const fvc = makeCancelable(fv.toPromise());
-                abort.signal.addEventListener("abort", () => cancelPromise(fvc));
-                return fvc;
-            });
-            return fromPromise<R>(makeCancelable(res, abort));
-           },
+           then: thenFn,
+           map: mapFn,
            settled: () => {throw new Error("Pending value")},
-           settledOr: (other: T | SettledValue<T>) => isSettled(other) ? other : fromValue<T>(other),
-           or: (other: FutureMaterial<T>) => ret,
+           settledOr: <R>(other: R | SettledValue<R>) => isSettled(other) ? other : fromValue<R>(other),
+           or: <R>(other: FutureMaterial<R>) => ret,
            valueOr: <R>(other: R) => other,
        };
        return ret;
@@ -171,9 +193,11 @@ export namespace FutureValue {
            isSettled: true,
            map: <R>(f: (v: never) => FutureMaterial<R>) => ret,
            settled: () => ret,
-           settledOr: (other: T | SettledValue<T>) => ret,
-           or: (other: FutureMaterial<T>) => ret,
+           settledOr: <R>(other: R | SettledValue<R>) => ret,
+           or: <R>(other: FutureMaterial<R>) => ret,
            valueOr: <R>(other: R) => other,
+            //Need to use 'as' because of overloaded method defintion. 
+           then: <R>(f: (settled: SettledValue<never>) => FutureMaterial<R>) => tryFutureValue(() => f(ret)), 
         };
         return ret;
     }
@@ -185,7 +209,22 @@ export namespace FutureValue {
             return fromError(err);
         }
     }
+
+    export function tryFutureValue<T>(block: () => FutureMaterial<T>): FutureValue<T> {
+        const ret = tryMaybeFutureValue(block);
+        if (hasNoValue(ret)) throw new Error("SHN");
+        return ret;
+    }
     
+    export function tryMaybeFutureValue<T>(block: () => MaybeFutureMaterial<T>): MaybeFutureValue<T>{
+        try {
+            const mat = block();
+            return wrapMaybe(mat);
+        } catch (err) {
+            return fromError(err);
+        }
+    }
+
     /**
      * Unwraps future value to either value, thrown error or thrown promise. It is not
      * always safe to unwrap future value this way. Call this method only if you are sure

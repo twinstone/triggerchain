@@ -47,6 +47,7 @@ export class ValueAccessWithDeps extends ValueAccess {
     }
 
     public use<T>(init: () => FutureMaterial<T>, deps: DependencyList): FutureValue<T> {
+        this.assertUnlocked();
         let rec: UseRecord<T>;
         if (this.useCounter < this.useRecords.length) {
             rec = this.useRecords[this.useCounter];
@@ -77,6 +78,7 @@ export class ValueAccessWithDeps extends ValueAccess {
     }
 
     public getValue<T>(state: ReadableState<T>): FutureValue<T> {
+        this.assertUnlocked();
         const src = state.get(this.data);
         this.addDependency(state.key);
         return src.current();

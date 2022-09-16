@@ -1,18 +1,10 @@
-import { ReduceAccess } from "./access";
+import { InitializeStateCfg, ReducingStateCfg } from "./configurations";
 import { DataStore } from "./DataStore";
-import { FutureMaterial } from "./FutureValue";
 import { FutureResource } from "./FutureResource";
+import { FutureMaterial } from "./FutureValue";
 import { ReducingState } from "./ReducingState";
-import { SerializationCfg } from "./SerializationCfg";
-import { SettableState } from "./SettableState";
-import { StateBase } from "./StateBase";
 import { ReducingStateBase } from "./ReducingStateBase";
-
-export interface ReducingStateCfg<T, C> {
-    readonly init?: FutureMaterial<T> | (() => FutureMaterial<T>);
-    readonly pickler?: SerializationCfg<T>;
-    readonly reduce: (access: ReduceAccess, previous: T, command: C) => FutureMaterial<T>;
-}
+import { SerializationCfg } from "./SerializationCfg";
 
 export class BasicReducingState<T, C> extends ReducingStateBase<T, C> implements ReducingState<T, C> {
 
@@ -20,18 +12,12 @@ export class BasicReducingState<T, C> extends ReducingStateBase<T, C> implements
         super(key, hmrToken);
     }
 
+    protected initCfg(): InitializeStateCfg<T> {
+        return this.cfg;
+    }
+
     reduce(command: C): void {
         throw new Error("Method not implemented.");
     }
 
-    set(data: DataStore, v: FutureMaterial<T>): void {
-        throw new Error("Method not implemented.");
-    }
-
-    public get(data: DataStore): FutureResource<T> {
-        throw new Error("Method not implemented.");
-    }
-    public pickler(): SerializationCfg<T> | undefined {
-        return this.cfg.pickler;
-    }
 }

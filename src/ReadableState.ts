@@ -8,5 +8,4 @@ export interface ReadableState<T> {
     get(data: DataStore): FutureResource<T>;
     subscribe(data: DataStore, callback: () => void): () => void;
     refresh(data: DataStore): void;
-    pickler(): SerializationCfg<T> | undefined;
 }

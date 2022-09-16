@@ -2,8 +2,6 @@ import React, { PropsWithChildren } from "react";
 import { InitAccess } from "./access";
 import { DataStore } from "./DataStore";
 import { DataStoreContext } from "./DataStoreContext";
-import { MaybeFutureMaterial } from "./FutureValue";
-import { SettableState } from "./SettableState";
 import { ValueAccess } from "./ValueAccess";
 
 interface InitDataStoreProps {
@@ -42,8 +40,8 @@ export class InitDataStore extends React.Component<PropsWithChildren<InitDataSto
     protected static createDataStore(props: InitDataStoreProps): DataStore {
         const datastore = new DataStore(props.ssr ?? false);
         if (props.init) {
-            const access = new ValueAccess(datastore).toInitAccess();
-            props.init(access);
+            const init = props.init;
+            ValueAccess.withAccess(datastore, (access) => init(access.toInitAccess()));
         }
         datastore.initialize();
         if (props.ssrCached) {

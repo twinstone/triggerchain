@@ -1,12 +1,13 @@
-import { BasicReducingState, ReducingStateCfg } from "./BasicReducingState";
-import { BasicState, BasicStateCfg } from "./BasicState";
-import { DerivedReducingState, DerivedReducingStateCfg } from "./DerivedReducingState";
-import { DerivedState, DerivedStateCfg } from "./DerivedState";
+import { BasicReducingState } from "./BasicReducingState";
+import { BasicState } from "./BasicState";
+import { BasicStateCfg, DerivedReducingStateCfg, DerivedStateCfg, ReducingStateCfg, UpdatableDerivedStateCfg } from "./configurations";
+import { DerivedReducingState } from "./DerivedReducingState";
+import { DerivedState, } from "./DerivedState";
 import { Qualifier } from "./Qualifier";
 import { ReadableState } from "./ReadableState";
 import { ReducingState } from "./ReducingState";
 import { SettableState } from "./SettableState";
-import { UpdatableDerivedState, UpdatableDerivedStateCfg } from "./UpdatableDerivedState";
+import { UpdatableDerivedState } from "./UpdatableDerivedState";
 
 const names = new Set<string>();
 
@@ -32,7 +33,7 @@ export function basicState<T>(key: string, cfg: BasicStateCfg<T>): SettableState
 }
 
 function isUpdatable<T>(cfg: DerivedStateCfg<T> | UpdatableDerivedStateCfg<T>): cfg is UpdatableDerivedStateCfg<T> {
-    return "onSet" in cfg || "onSetPromise" in cfg;
+    return "onSet" in cfg;
 }
 
 export function derivedState<T>(key: string, cfg: UpdatableDerivedStateCfg<T>): SettableState<T>;
@@ -40,7 +41,7 @@ export function derivedState<T>(key: string, cfg: DerivedStateCfg<T>): ReadableS
 export function derivedState<T>(key: string, cfg: DerivedStateCfg<T> | UpdatableDerivedStateCfg<T>): ReadableState<T> {
     checkKey(key);
     if (isUpdatable(cfg)) {
-        return new UpdatableDerivedState(key, cfg);
+        return new UpdatableDerivedState(key, cfg, cfg);
     } else {
         return new DerivedState(key, cfg, cfg);
     }
@@ -54,7 +55,7 @@ export function derivedStateGroup<T, Q extends Qualifier>(key: string, cfg: ((q:
         const qcfg = cfg(q);
         const qkey = key + "/" + Qualifier.toString(q);
         if (isUpdatable(qcfg)) {
-            return new UpdatableDerivedState(qkey, qcfg);
+            return new UpdatableDerivedState(qkey, cfg, qcfg);
         } else {
             return new DerivedState(qkey, cfg, qcfg);
         }    
