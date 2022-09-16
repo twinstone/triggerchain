@@ -1,0 +1,19 @@
+strict digraph {
+    overlap=false;
+    rankdir=BT;
+    
+    node [shape=box, style=dashed]
+    edge [arrowhead=empty]
+    
+   ReadableState
+   SettableState -> ReadableState
+   ReducingState -> {ReadableState, SettableState}
+
+   node [style=solid]
+
+   BasicState -> SettableState
+   DerivedState -> ReadableState
+   UpdatableDerivedState -> SettableState
+   BasicReducingState -> ReducingState
+   DerivedReducingState -> ReducingState
+}

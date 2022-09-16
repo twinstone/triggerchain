@@ -1,0 +1,15 @@
+strict digraph {
+    overlap=false;
+    rankdir=BT;
+    
+    node [shape=box]
+    edge [arrowhead=empty]
+    
+   "MaybeFutureValue<T>"
+   NoValue -> "MaybeFutureValue<T>"
+   "FutureValue<T>" -> "MaybeFutureValue<T>"
+   "PendingValue<T>" -> "FutureValue<T>"
+   "SettledValue<T>" -> "FutureValue<T>"
+   "PresentValue<T>" -> "SettledValue<T>"
+   ErrorValue -> "SettledValue<T>"
+}

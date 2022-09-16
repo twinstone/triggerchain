@@ -1,0 +1,20 @@
+strict digraph {
+    overlap=false;
+    Start [shape=point]
+    Cancel [shape=box]
+    Init
+    Invalid
+    Pending
+    Settled
+    Start -> Init [label="create store"]
+    Init -> Invalid [label="invalidate"]
+    Init -> Pending [label="get/set"]
+    Init -> Settled [label="ssr/set/get"]
+    Init -> Init [label="ssr deps"]
+    Invalid -> Pending [label="get/set"]
+    Invalid -> Settled [label="get/set"]
+    Pending -> Settled [label="resolve/reject"]
+    Pending -> Cancel [label="invalidate"]
+    Cancel -> Invalid
+    Settled -> Invalid [label="invalidate"]
+}
