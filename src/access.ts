@@ -4,25 +4,32 @@ import { ReadableState } from "./ReadableState";
 import { ReducingState } from "./ReducingState";
 import { SettableState } from "./SettableState";
 
-export interface ReduceAccess {
+
+export interface XAccess {
     value: <T>(state: ReadableState<T>) => FutureValue<T>;
+}
+export interface ReduceAccess extends XAccess {
     /**
      * Each time the method is invoked, it must be provided with future value originating from
      * outer context. Starting a computation each time the unwrap is called will result in
      * infinite loop.
      * @param source 
      */
-    unwrap: <T>(value: MaybeFutureValue<T>) => T;
+    unwrap: {
+        <T>(value: MaybeFutureValue<T>): T;
+        <A extends readonly FutureValue<any>[] | []>(args: A): { -readonly [P in keyof A]: A[P] extends FutureValue<infer T> ? T : never }
+    };
     /**
      * Similarily to React hooks, the method call must occur in same order and same count
      * for each invocation of reduce/derive methods. I.e. do not call in conditional blocks.
      */
     use: <T>(init: () => FutureMaterial<T>, deps: DependencyList) => FutureValue<T>;
 }
-
 export interface ReadAccess extends ReduceAccess {
-    get: <T>(store: ReadableState<T>) => T;
-    getMany: <A extends readonly ReadableState<any>[] | []>(args: A) => { -readonly [P in keyof A]: A[P] extends ReadableState<infer T> ? T : never };
+    get: {
+        <T>(store: ReadableState<T>): T;
+        <A extends readonly ReadableState<any>[] | []>(args: A): { -readonly [P in keyof A]: A[P] extends ReadableState<infer T> ? T : never }
+    };
     getValue: <T>(store: ReadableState<T>) => FutureValue<T>;
 }
 
@@ -38,7 +45,6 @@ export interface WriteAccess extends InitAccess {
     reduce: <T, C>(state: ReducingState<T, C>, command: C) => void;
 }
 
-export interface CallbackAccess extends WriteAccess {
-    value: <T>(state: ReadableState<T>) => FutureValue<T>;
+export interface CallbackAccess extends XAccess, WriteAccess {
 }
 

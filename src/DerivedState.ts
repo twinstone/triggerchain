@@ -22,12 +22,12 @@ export class DerivedState<T> extends StateBase<T> {
         if (store.invalid) {
             const access = new ValueAccessWithDeps(data, store);
             try {
-                const value = this.cfg.derive(access, q);
+                const value = this.cfg.derive(access.toReadAccess());
                 store.setValueOrPromise(value);
             } catch (e) {
                 if (e instanceof Promise) {
                     store.setPending();
-                    this.asyncLoop(e, store, store.promise, access, q);
+                    this.asyncLoop(e, store, store.promise, access);
                 } else {
                     store.setError(e);
                 }
@@ -43,7 +43,7 @@ export class DerivedState<T> extends StateBase<T> {
      * @param store
      * @param target target promise captured at time when attempt to recalculate was made. If store contains another promise, do not update the store (this fiber was cancelled)
      */
-    protected async asyncLoop(e: Promise<any>, store: ValueStore<T>, target: PromiseExt<T>, access: ValueAccessWithDeps, q: Qualifier): Promise<void> {
+    protected async asyncLoop(e: Promise<any>, store: ValueStore<T>, target: PromiseExt<T>, access: ValueAccessWithDeps): Promise<void> {
         try {
             try {
                 await e;
@@ -52,19 +52,19 @@ export class DerivedState<T> extends StateBase<T> {
                 console.warn(`Signalling promise error in async loop of ${this.key}/${q}`, e);
             }
             if (store.promise === target) {
-                const value = this.cfg.derive(access, q);
+                const value = this.cfg.derive(access);
                 store.setValueOrPromise(value);
             }
         } catch (e) {
             if (store.promise === target) {
                 if (e instanceof Promise) {
-                    this.asyncLoop(e, store, target, access, q);
+                    this.asyncLoop(e, store, target, access);
                 } else {
                     store.setError(e);
                 }
             } else {
                 if (!(e instanceof Promise)) {
-                    console.error(`Error in cancelled async loop of ${this.key}/${q}`, e);
+                    console.error(`Error in cancelled async loop of ${this.key}`, e);
                 }
             }
         }

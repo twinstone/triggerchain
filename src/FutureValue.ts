@@ -127,11 +127,9 @@ export namespace FutureValue {
             settledOr: <R>(other: R | SettledValue<R>) => ret,
             or: <R>(other: FutureMaterial<R>) => ret,
             valueOr: <R>(other: R) => value,
-            //Need to use 'as' because of overloaded method defintion. 
             map: <R>(f: (v: T) => FutureMaterial<R>) => tryFutureValue(() => f(value)),
             then: <R>(f: (settled: SettledValue<T>) => FutureMaterial<R>) => tryFutureValue(() => f(ret)), 
         };
-        const z = ret.map(() => tryFutureValue(() => 7));
         return ret;
     }
     
@@ -196,7 +194,6 @@ export namespace FutureValue {
            settledOr: <R>(other: R | SettledValue<R>) => ret,
            or: <R>(other: FutureMaterial<R>) => ret,
            valueOr: <R>(other: R) => other,
-            //Need to use 'as' because of overloaded method defintion. 
            then: <R>(f: (settled: SettledValue<never>) => FutureMaterial<R>) => tryFutureValue(() => f(ret)), 
         };
         return ret;

@@ -20,10 +20,14 @@ export class ValueAccess {
         if (this.locked) throw new Error("Value access is locked");
     }
 
+    protected isArray<T>(v: T | readonly T[] | []): v is readonly T[] | [] {
+        return Array.isArray(v);
+    }
+
     public value<T>(state: ReadableState<T>): FutureValue<T> {
         this.assertUnlocked();
-        const src = state.get(this.data);
-        return src.current();
+        const res = state.get(this.data);
+        return res.current();
     }
 
     public set<T>(s: SettableState<T>, v: MaybeFutureMaterial<T>): void {
@@ -60,18 +64,22 @@ export class ValueAccess {
     public toCallbackAccess(): CallbackAccess {
         const access = this.toWriteAccess();
         return Object.assign(access, {
-            value: <T>(s: ReadableState<T>) => this.value(s),
+            value: (s: any) => this.value(s) as any,
         });
     }
 
-    public static withAccess(data: DataStore, block: (access: ValueAccess) => void): void {
+    public static withAccess<T>(data: DataStore, block: (access: ValueAccess) => T): T {
         const access = new ValueAccess(data);
         data.startBatch();
         try {
-            block(access);
+            return block(access);
         } finally {
             access.lock();
             data.endBatch();
         }
     }
 }
+
+//Test compilation
+const a: ValueAccess = null as any;
+const b: CallbackAccess = a;

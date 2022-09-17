@@ -2,8 +2,7 @@ import { DependencyList } from "react";
 import { ReadAccess, ReduceAccess } from "./access";
 import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
-import { FutureMaterial, FutureValue } from "./FutureValue";
-import { Qualifier } from "./Qualifier";
+import { FutureMaterial, FutureValue, MaybeFutureValue } from "./FutureValue";
 import { ReadableState } from "./ReadableState";
 import { StateBase } from "./StateBase";
 import { ValueAccess } from "./ValueAccess";
@@ -72,29 +71,36 @@ export class ValueAccessWithDeps extends ValueAccess {
         }
     }
 
-    public get<T>(state: ReadableState<T>): T {
-        const value = this.getValue(state);
-        return FutureValue.dangerouslyUnwrap(value);
+    public get<T>(state: ReadableState<T>): T;
+    public get<A extends readonly ReadableState<any>[] | []>(args: A): { -readonly [P in keyof A]: A[P] extends ReadableState<infer T> ? T : never };
+    public get(x: ReadableState<any> | readonly ReadableState<any>[] | []): any {
+        if (this.isArray<ReadableState<any>>(x)) {
+            const vals: FutureValue<any>[] = [];
+            for (const s of x) vals.push(this.getValue(s));
+            return FutureValue.dangerouslyUnwrap(FutureValue.all(vals));
+        }
+        const fv = this.getValue(x);
+        return FutureValue.dangerouslyUnwrap(fv);
     }
 
     public getValue<T>(state: ReadableState<T>): FutureValue<T> {
-        this.assertUnlocked();
-        const src = state.get(this.data);
+        const res = this.value(state);
         this.addDependency(state.key);
-        return src.current();
+        return res;
     }
 
-    public getMany<A extends readonly ReadableState<any>[] | []>(args: A): { -readonly [P in keyof A]: A[P] extends ReadableState<infer T> ? T : never } {
-        const vals: FutureValue<any>[] = [];
-        for (const s of args) {
-            vals.push(this.getValue(s));
+    public unwrap<T>(value: MaybeFutureValue<T>): T;
+    public unwrap<A extends readonly FutureValue<any>[] | []>(args: A): { -readonly [P in keyof A]: A[P] extends FutureValue<infer T> ? T : never }
+    public unwrap(x: MaybeFutureValue<any> | readonly FutureValue<any>[] | []): any | any[] {
+        if (this.isArray<MaybeFutureValue<any>>(x)) {
+            x = FutureValue.all(x);
         }
-        return FutureValue.dangerouslyUnwrap(FutureValue.all(vals)) as any;
+        return FutureValue.dangerouslyUnwrap(x);
     }
 
     public toReduceAccess(): ReduceAccess {
         return {
-            unwrap: (v) => FutureValue.dangerouslyUnwrap(v),
+            unwrap: (v: any) => this.unwrap(v),
             use: (v, d) => this.use(v, d),
             value: (s) => this.value(s),
         };
@@ -102,12 +108,16 @@ export class ValueAccessWithDeps extends ValueAccess {
 
     public toReadAccess(): ReadAccess {
         const access = this.toReduceAccess();
-        const rest: Pick<ReadAccess, "get" | "getValue" | "getMany"> = {
-            get: (s) => this.get(s),
+        const rest: Pick<ReadAccess, "get" | "getValue"> = {
+            get: (x: any) => this.get(x),
             getValue: (s) => this.getValue(s),
-            getMany: (a) => this.getMany(a)
         };
         return Object.assign(access, rest);
     }
 
 }
+
+//Test compilation
+const a: ValueAccessWithDeps = null as any;
+const b: ReadAccess = a;
+const c: ReduceAccess = a;
