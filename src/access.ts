@@ -5,14 +5,14 @@ import { ReducingState } from "./ReducingState";
 import { SettableState } from "./SettableState";
 
 
-export interface XAccess {
+export interface ValueAccess {
     value: <T>(state: ReadableState<T>) => FutureValue<T>;
 }
-export interface ReduceAccess extends XAccess {
+export interface ReduceAccess extends ValueAccess {
     /**
      * Each time the method is invoked, it must be provided with future value originating from
      * outer context. Starting a computation each time the unwrap is called will result in
-     * infinite loop.
+     * infinite loop. See `use` method for means to start computation during derive/reduce process.
      * @param source 
      */
     unwrap: {
@@ -45,6 +45,6 @@ export interface WriteAccess extends InitAccess {
     reduce: <T, C>(state: ReducingState<T, C>, command: C) => void;
 }
 
-export interface CallbackAccess extends XAccess, WriteAccess {
+export interface CallbackAccess extends ValueAccess, WriteAccess {
 }
 

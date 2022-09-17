@@ -5,7 +5,7 @@ import { FutureResource } from "./FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureValue } from "./FutureValue";
 import { ReadableState } from "./ReadableState";
 import { StateBase } from "./StateBase";
-import { ValueAccess } from "./ValueAccess";
+import { StateAccess } from "./StateAccess";
 import { ValueStore } from "./ValueStore";
 
 interface UseRecord<T> {
@@ -13,7 +13,7 @@ interface UseRecord<T> {
     deps: DependencyList;
 }
 
-export class ValueAccessWithDeps extends ValueAccess {
+export class StateAccessWithDeps extends StateAccess {
 
     private dependencies = new Set<string>();
     private useCounter = 0;
@@ -118,6 +118,6 @@ export class ValueAccessWithDeps extends ValueAccess {
 }
 
 //Test compilation
-const a: ValueAccessWithDeps = null as any;
+const a: StateAccessWithDeps = null as any;
 const b: ReadAccess = a;
 const c: ReduceAccess = a;

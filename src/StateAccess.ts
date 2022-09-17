@@ -5,7 +5,7 @@ import { ReadableState } from "./ReadableState";
 import { ReducingState } from "./ReducingState";
 import { SettableState } from "./SettableState";
 
-export class ValueAccess {
+export class StateAccess {
 
     private locked: boolean = false;
 
@@ -68,8 +68,8 @@ export class ValueAccess {
         });
     }
 
-    public static withAccess<T>(data: DataStore, block: (access: ValueAccess) => T): T {
-        const access = new ValueAccess(data);
+    public static withAccess<T>(data: DataStore, block: (access: StateAccess) => T): T {
+        const access = new StateAccess(data);
         data.startBatch();
         try {
             return block(access);
@@ -81,5 +81,5 @@ export class ValueAccess {
 }
 
 //Test compilation
-const a: ValueAccess = null as any;
+const a: StateAccess = null as any;
 const b: CallbackAccess = a;

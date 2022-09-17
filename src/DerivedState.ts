@@ -4,7 +4,7 @@ import { FutureResource } from "./FutureResource";
 import { PromiseExt } from "./PromiseExt";
 import { Qualifier } from "./Qualifier";
 import { StateBase } from "./StateBase";
-import { ValueAccessWithDeps } from "./ValueAccessWithDeps";
+import { StateAccessWithDeps } from "./StateAccessWithDeps";
 import { ValueStore } from "./ValueStore";
 
 export class DerivedState<T> extends StateBase<T> {
@@ -20,7 +20,7 @@ export class DerivedState<T> extends StateBase<T> {
         const store = data.findWithCached<T>(this.key, this.cfg.pickler);
         //console.log(`get ${this.key} ${q}`, store.invalid, store.value.state);
         if (store.invalid) {
-            const access = new ValueAccessWithDeps(data, store);
+            const access = new StateAccessWithDeps(data, store);
             try {
                 const value = this.cfg.derive(access.toReadAccess());
                 store.setValueOrPromise(value);
@@ -43,7 +43,7 @@ export class DerivedState<T> extends StateBase<T> {
      * @param store
      * @param target target promise captured at time when attempt to recalculate was made. If store contains another promise, do not update the store (this fiber was cancelled)
      */
-    protected async asyncLoop(e: Promise<any>, store: ValueStore<T>, target: PromiseExt<T>, access: ValueAccessWithDeps): Promise<void> {
+    protected async asyncLoop(e: Promise<any>, store: ValueStore<T>, target: PromiseExt<T>, access: StateAccessWithDeps): Promise<void> {
         try {
             try {
                 await e;
