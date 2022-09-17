@@ -2,7 +2,7 @@ import React, { PropsWithChildren } from "react";
 import { InitAccess } from "./access";
 import { DataStore } from "./DataStore";
 import { DataStoreContext } from "./DataStoreContext";
-import { ValueAccess } from "./ValueAccess";
+import { StateAccess } from "./StateAccess";
 
 interface InitDataStoreProps {
     ssr?: boolean;
@@ -41,7 +41,7 @@ export class InitDataStore extends React.Component<PropsWithChildren<InitDataSto
         const datastore = new DataStore(props.ssr ?? false);
         if (props.init) {
             const init = props.init;
-            ValueAccess.withAccess(datastore, (access) => init(access.toInitAccess()));
+            StateAccess.withAccess(datastore, (access) => init(access.toInitAccess()));
         }
         datastore.initialize();
         if (props.ssrCached) {

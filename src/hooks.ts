@@ -6,7 +6,7 @@ import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } fr
 import { ReadableState } from "./ReadableState";
 import { SettableState } from "./SettableState";
 import { fail } from "./utils";
-import { ValueAccess } from "./ValueAccess";
+import { StateAccess } from "./StateAccess";
 
 //TODO: useSyncExternalStore
 
@@ -52,7 +52,7 @@ export function useDataCallback<A extends any[], R>(f: (access: CallbackAccess, 
     const store =  useDataStore();
     return (...args) => {
         try {
-            return ValueAccess.withAccess(store, (access) => f(access.toCallbackAccess(), ...args));
+            return StateAccess.withAccess(store, (access) => f(access.toCallbackAccess(), ...args));
         } catch (e) {
             if (e instanceof Promise) throw new Error("Promise signalling is not allowed in callback");
             throw e;

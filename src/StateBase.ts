@@ -3,7 +3,7 @@ import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
 import { FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
 import { ReadableState } from "./ReadableState";
-import { ValueAccess } from "./ValueAccess";
+import { StateAccess } from "./StateAccess";
 
 function isFunction<T>(v: MaybeFutureMaterial<T> | (() => MaybeFutureMaterial<T>)): v is () => MaybeFutureMaterial<T> {
     return typeof v === "function";
