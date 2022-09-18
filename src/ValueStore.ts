@@ -1,21 +1,23 @@
 import { CancelError } from "./CancelError";
 import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
-import { FutureValue, MaybeFutureValue, PendingValue } from "./FutureValue";
+import { FutureMaterial, FutureValue, MaybeFutureValue, PendingValue } from "./FutureValue";
 import { PromiseExt } from "./PromiseExt";
-import { CancelablePromise } from "./promiseTools";
+import { cancelPromise, isPromiseCanceled, safeCancelable } from "./promiseTools";
 
-export type ValueStoreState = "init" | "invalid" | "pending" | "settled";
+export type ValueStoreState = "init" | "invalid" | "pending" | "settled" | "cancel";
 
 export class ValueStore<T> {
-    key: string;
-    state: ValueStoreState;
+    private readonly key: string;
+    private state: ValueStoreState;
     promise: PromiseExt<T>;
-    fiber: FutureResource<T> | undefined;
-    subscriptions: Array<() => void>;
-    upDependencies: Array<string>; //Only for SSR
-    downDependencies: Array<ValueStore<any>>;
-    invalidCount = 0;
+    private fiber: Omit<FutureResource<T>, "current"> | undefined;
+    //If present restart function must immediatelly call some of set* methods
+    private restart: (() => void) | undefined;
+    private subscriptions: Array<() => void>;
+    public upDependencies: Array<string>; //Only for SSR
+    private downDependencies: Array<ValueStore<any>>;
+    private invalidCount = 0;
 
     public constructor(private readonly data: DataStore, key: string) {
         this.key = key;
@@ -26,16 +28,36 @@ export class ValueStore<T> {
         this.downDependencies = [];
     }
 
-    protected setSettled(): void {
-        this.state = "settled";
-        this.cancelFiber();
-    }
-
-    protected cancelFiber(): void {
+    /**
+     * 
+     * @param skipRestart 
+     * @returns true if fiber was restarted (and state changed)
+     */
+    protected cancelFiber(skipRestart: boolean): boolean {
         if (this.fiber) {
             this.fiber.cancel();
             this.fiber = undefined;
         }
+        if (skipRestart) return false;
+        if (this.restart) {
+            const prev = this.state;
+            this.state = "cancel";
+            this.restart();
+            if (this.state === "cancel") {
+                console.error("Restart function failed to set state");
+                this.state = prev;
+            }
+            return true;
+        }
+        console.error("Value Store has no restart function, cancelling main promise");
+        this.promise.cancel();
+        return false;
+    }
+
+    protected setSettled(): void {
+        this.state = "settled";
+        this.cancelFiber(false);
+        this.restart = undefined;
     }
 
     public setValue(v: T): void {
@@ -43,7 +65,12 @@ export class ValueStore<T> {
         this.promise.resolve(v);
     }
 
-    public set(v: MaybeFutureValue<T>): void {
+    public setError(e: unknown): void {
+        this.setSettled();
+        this.promise.reject(e);
+    }
+
+    public set(v: MaybeFutureValue<T>, restart?: () => void): void {
         switch (v.state) {
             case "nothing":
                 this.invalidate();
@@ -55,60 +82,83 @@ export class ValueStore<T> {
                 this.setValue(v.value);
                 break;
             case "pending":
+                this.setPromise(v, restart);
                 break;
         }
     }
 
-    public setPending(): void {
-        this.state = "pending";
-        this.cancelFiber();    }
-
-    public setError(e: unknown): void {
-        this.setSettled();
-        this.promise.reject(e);
-    }
-
-    public setPromise(v: PendingValue<T>) {
-        this.setPending();
-        this.fiber = FutureResource.fromPending(v);
-        const target = this.fiber;
-        v.promise.then(
+    protected settle<T>(p: Promise<T>, res: (v: T) => void, rej: (e:unknown) => void) {
+        const current = this.fiber;
+        p.then(
             v => {
-                if (target === this.fiber) {
-                    this.setValue(v);
+                if (current === this.fiber) {
+                    res(v);
                 }
             },
             e => {
-                if (target === this.fiber) {
-                    this.setError(e);
+                if (current === this.fiber) {
+                    rej(e);
                 } else {
-                    console.warn("Error in canceled fiber", e);
+                    if (!(e instanceof CancelError)) console.warn("Error in canceled fiber", e);
                 }
-            });
+            },
+        );
+    }
+    
+    public loop(src: () => FutureMaterial<T>, restart?: () => void) {
+        const fv = FutureValue.tryFutureValue(src);
+        if (fv.state === "error" && fv.error instanceof Promise) {
+            const p = safeCancelable(fv.error);
+            this.fiber = {
+                cancel: () => cancelPromise(p),
+                isCanceled: () => isPromiseCanceled(p),
+            }
+            this.settle(p, () => this.loop(src, restart), () => this.loop(src, restart));
+        } else {
+            this.set(fv, restart);
+        }
     }
 
-    //Invalidate downstream subtree and then call subscriptions
+    public setPromise(v: Promise<T> | PendingValue<T>, restart?: () => void) {
+        this.state = "pending";
+        this.cancelFiber(false);
+        this.restart = restart;
+        const fv = v instanceof Promise ? FutureValue.fromPromise(v) : v;
+        this.fiber = FutureResource.fromPending(fv);
+        this.settle(fv.promise, v => this.setValue(v), e => this.setError(e));
+    }
+
+    public invalidate(): void {
+        this.invalidateInternal(false);
+    }
+
+        //Invalidate downstream subtree and then call subscriptions
     //Subcsriptions may (and will) call State.get, and we don't want to
     //interleave invalidation and revalidation of stored value.
-    public invalidate(): void {
+    protected invalidateInternal(skipRestart: boolean): void {
+        if (this.state === "invalid") return;
         console.log(`Invalidating ${this.key}. ${this.upDependencies.length} up-dependencies, ${this.downDependencies.length} down-dependencies, ${this.subscriptions.length} subscriptions.`);
-        if (this.state !== "invalid") {
-            this.state = "invalid";
-            this.cancelFiber();
-            if (this.promise.isSettled) {
-                this.promise = new PromiseExt<T>(`${this.key}/${this.invalidCount++}`);
+        if (this.state === "pending") {
+            if (this.cancelFiber(skipRestart)) return;            
+        }
+        if (!this.promise.isSettled && this.state !== "init") {
+            console.error("Promise not settled, cancelling");
+            this.promise.cancel();
+        }
+        this.state = "invalid";
+        if (this.promise.isSettled) {
+            this.promise = new PromiseExt<T>(`${this.key}/${this.invalidCount++}`);
+        }
+        this.data.startBatch();
+        try {
+            this.data.notify(this.subscriptions);
+            this.upDependencies = [];
+            for (const ds of this.downDependencies) {
+                ds.invalidate();
             }
-            this.data.startBatch();
-            try {
-                this.data.notify(this.subscriptions);
-                this.upDependencies = [];
-                for (const ds of this.downDependencies) {
-                    ds.invalidate();
-                }
-                this.downDependencies = [];    
-            } finally {
-                this.data.endBatch();
-            }
+            this.downDependencies = [];    
+        } finally {
+            this.data.endBatch();
         }
     }
 
@@ -129,5 +179,13 @@ export class ValueStore<T> {
         if (pos >= 0) {
             this.subscriptions.splice(pos, 1);
         }
+    }
+
+    public get isInit(): boolean {
+        return this.state === "init";
+    }
+
+    public get shouldRecompute(): boolean {
+        return this.state === "invalid" || this.state === "init" || this.state === "cancel";
     }
 }

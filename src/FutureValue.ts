@@ -78,7 +78,7 @@ export namespace FutureValue {
         valueOr: <R>(def: R) => def,
         settled: () => { throw new Error("No Value") },
         settledOr: <R>(other: R | SettledValue<R>) => isSettled(other) ? other : fromValue<R>(other),
-        or: <R>(other: FutureMaterial<R>) => wrap(other),
+        or: <R>(other: FutureMaterial<R>) => wrap<R>(other),
         then: <R>(f: (settled: SettledValue<never>) => FutureMaterial<R>) => noValue,
     };
 
@@ -201,7 +201,8 @@ export namespace FutureValue {
 
     export function tryValue<T>(block: () => T): SettledValue<T> {
         try {
-            return fromValue(block());
+            const x = fromValue(block());
+            return x;
         } catch (err) {
             return fromError(err);
         }

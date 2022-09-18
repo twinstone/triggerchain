@@ -14,7 +14,8 @@ export namespace FutureResource {
         return fromPending(fv);
     }
 
-    export function fromSettled<T>(value: SettledValue<T>): FutureResource<T> {
+    export function fromSettled<T>(value: T | SettledValue<T>): FutureResource<T> {
+        const fv = FutureValue.is(value) ? value : FutureValue.fromValue(value);
         let canceled = false;
         return {
             isCanceled() {
@@ -24,25 +25,29 @@ export namespace FutureResource {
                 canceled = true;
             },
             current() {
-                return value;
+                return fv;
             },
         };
     }
 
-    export function fromPending<T>(value: PendingValue<T>): FutureResource<T> {
-        const prom = value.promise
-            .then((res) => {fv = FutureValue.fromValue(res); return res;})
-            .catch((err) => {fv = FutureValue.fromError(err); throw err;});
-        let fv: FutureValue<T> = FutureValue.fromPromise(prom);
+    export function fromPending<T>(value: Promise<T> | PendingValue<T>): FutureResource<T> {
+        const fv = value instanceof Promise? FutureValue.fromPromise<T>(value) : value;
+        const prom = fv.promise
+            .then((res) => {ret = FutureValue.fromValue(res); return res;})
+            .catch((err) => {ret = FutureValue.fromError(err); throw err;});
+        const ret0 = FutureValue.fromPromise(prom);
+        let ret: FutureValue<T> = ret0;
+        let canceled = false;
         return {
             isCanceled() {
-                return isPromiseCanceled(value.promise);
+                return canceled;
             },
             cancel() {
-                cancelPromise(value.promise);
+                canceled = true;
+                if (ret === ret0) cancelPromise(fv.promise);
             },
             current() {
-                return fv;
+                return ret;
             },
         };
     }

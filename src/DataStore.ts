@@ -3,6 +3,7 @@ import { Qualifier } from "./Qualifier";
 import { ReadableState } from "./ReadableState";
 import { SerializationCfg } from "./SerializationCfg";
 import { SettableState } from "./SettableState";
+import { StateBase } from "./StateBase";
 import { StateRecord } from "./StateRecord";
 import { ValueStore } from "./ValueStore";
 
@@ -18,7 +19,7 @@ export class DataStore {
     private values = new Map<string, ValueStore<any>>();
     private serialized = new Map<string, "full" | "deps">();
     private recorderScriptEmited: boolean = false;
-    private notes: Array<ReadableState<any>> = [];
+    private notes: Array<StateBase<any>> = [];
     private initialized: boolean = false;
 
     /**
@@ -40,7 +41,7 @@ export class DataStore {
 
     public findWithCached<T>(key: string, pickler: SerializationCfg<T> | undefined): ValueStore<T> {
         let store = this.find<T>(key, true);
-        if (this.ssr || store.state !== "init") return store;
+        if (this.ssr || store.isInit) return store;
         const cached = window[ssrCacheGlobalName]?.[key];
         if (!cached) return store;
         console.log(`Restoring ${key} from cache`);
@@ -75,14 +76,14 @@ export class DataStore {
     }
 
     //TODO Note automatically in find methods?
-    public note(state: ReadableState<any>) {
+    public note(state: StateBase<any>) {
         if (this.ssr) {
             //console.log(`Recording ${state.key} ${qualifier}`);
             this.notes.push(state);
         }
     }
 
-    protected serializeState(state: ReadableState<any>, last: boolean): string | undefined {
+    protected serializeState(state: StateBase<any>, last: boolean): string | undefined {
         const pickler = state.pickler();
         const mode = pickler ? "full" : "deps";
         const prev = this.serialized.get(state.key);
@@ -128,7 +129,7 @@ export class DataStore {
      */
     public serializeRecords(last: boolean): string {
         let script = "";
-        const newNotes:Array<ReadableState<any>> = [];
+        const newNotes:Array<StateBase<any>> = [];
 
         if (!this.ssr) return "";
         if (!this.recorderScriptEmited) {
