@@ -1,9 +1,7 @@
 import { CallbackAccess, InitAccess, WriteAccess } from "./access";
 import { DataStore } from "./DataStore";
 import { FutureValue, MaybeFutureMaterial } from "./FutureValue";
-import { ReadableState } from "./ReadableState";
-import { ReducingState } from "./ReducingState";
-import { SettableState } from "./SettableState";
+import { ReadableState, ReducingState, SettableState } from "./state";
 
 export class StateAccess {
 
@@ -37,7 +35,7 @@ export class StateAccess {
 
     public reduce<T, C>(state: ReducingState<T, C>, command: C): void {
         this.assertUnlocked();
-        state.reduce(command);
+        state.reduce(this.data, command);
     }
 
     public refresh<T>(s: ReadableState<T>): void {

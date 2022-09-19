@@ -1,13 +1,27 @@
 import { BasicReducingState } from "./BasicReducingState";
 import { BasicState } from "./BasicState";
 import { BasicStateCfg, DerivedReducingStateCfg, DerivedStateCfg, ReducingStateCfg, UpdatableDerivedStateCfg } from "./configurations";
+import { DataStore } from "./DataStore";
 import { DerivedReducingState } from "./DerivedReducingState";
 import { DerivedState, } from "./DerivedState";
+import { FutureResource } from "./FutureResource";
+import { MaybeFutureMaterial } from "./FutureValue";
 import { Qualifier } from "./Qualifier";
-import { ReadableState } from "./ReadableState";
-import { ReducingState } from "./ReducingState";
-import { SettableState } from "./SettableState";
 import { UpdatableDerivedState } from "./UpdatableDerivedState";
+
+export interface ReadableState<T> {
+    readonly key: string;
+    get(data: DataStore): FutureResource<T>;
+    subscribe(data: DataStore, callback: () => void): () => void;
+    refresh(data: DataStore): void;
+}
+export interface SettableState<T> extends ReadableState<T> {
+    set(data: DataStore, v: MaybeFutureMaterial<T>): void;
+}
+
+export interface ReducingState<T, C> extends ReadableState<T>, SettableState<T> {
+    reduce(data: DataStore, command: C): void;
+}
 
 const names = new Set<string>();
 

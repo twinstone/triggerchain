@@ -1,8 +1,6 @@
 import { DependencyList } from "react";
 import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
-import { ReadableState } from "./ReadableState";
-import { ReducingState } from "./ReducingState";
-import { SettableState } from "./SettableState";
+import { ReadableState, ReducingState, SettableState } from "./state";
 
 
 export interface ValueAccess {

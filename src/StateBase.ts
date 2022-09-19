@@ -2,13 +2,10 @@ import { InitializeStateCfg, StateCfgBase } from "./configurations";
 import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
 import { FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
-import { ReadableState } from "./ReadableState";
 import { SerializationCfg } from "./SerializationCfg";
-import { StateAccess } from "./StateAccess";
+import { ReadableState } from "./state";
+import { isFunction } from "./utils";
 
-function isFunction<T>(v: MaybeFutureMaterial<T> | (() => MaybeFutureMaterial<T>)): v is () => MaybeFutureMaterial<T> {
-    return typeof v === "function";
-}
 
 export abstract class StateBase<T> implements ReadableState<T> {
 
@@ -40,7 +37,7 @@ export abstract class StateBase<T> implements ReadableState<T> {
             store.set(init);
         } 
         data.note(this);
-        return store.promise;
+        return store.get();
     }
 
     public refresh(data: DataStore): void {
@@ -48,6 +45,14 @@ export abstract class StateBase<T> implements ReadableState<T> {
         if (store) {
             const subs = store.invalidate();
         }
+    }
+
+    protected setInternal(data: DataStore, v: MaybeFutureMaterial<T>): void {
+        const store = data.find<T>(this.key, true);
+        if (!store.shouldRecompute) store.invalidate(true);
+        const value = FutureValue.wrapMaybe(v);
+        store.set(value);
+        data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
     }
 
     

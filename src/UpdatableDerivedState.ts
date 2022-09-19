@@ -2,7 +2,7 @@ import { UpdatableDerivedStateCfg } from "./configurations";
 import { DataStore } from "./DataStore";
 import { DerivedState } from "./DerivedState";
 import { FutureValue, MaybeFutureMaterial } from "./FutureValue";
-import { SettableState } from "./SettableState";
+import { SettableState } from "./state";
 import { StateAccess } from "./StateAccess";
 
 export class UpdatableDerivedState<T> extends DerivedState<T> implements SettableState<T> {
@@ -19,7 +19,6 @@ export class UpdatableDerivedState<T> extends DerivedState<T> implements Settabl
                 StateAccess.withAccess(data, (access) => this.cfg.onPending(access.toWriteAccess(), val));
             }
             val.then(s => this.set(data, s));
-            return;
         } else {
             StateAccess.withAccess(data, (access) => this.cfg.onSet(access.toWriteAccess(), val));
         }

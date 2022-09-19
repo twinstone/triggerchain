@@ -3,10 +3,9 @@ import { CallbackAccess } from "./access";
 import { DataStoreContext } from "./DataStoreContext";
 import { FutureResource } from "./FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
-import { ReadableState } from "./ReadableState";
-import { SettableState } from "./SettableState";
-import { fail } from "./utils";
+import { fail, isFunction } from "./utils";
 import { StateAccess } from "./StateAccess";
+import { ReadableState, SettableState } from "./state";
 
 //TODO: useSyncExternalStore
 
@@ -58,10 +57,6 @@ export function useDataCallback<A extends any[], R>(f: (access: CallbackAccess, 
             throw e;
         }
     };
-}
-
-function isFunction<D>(v: D | (() => D)): v is () => D {
-    return v && typeof v === "function";
 }
 
 /**

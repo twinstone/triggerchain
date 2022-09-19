@@ -1,8 +1,6 @@
 import { EffectCancel } from "./effect";
-import { Qualifier } from "./Qualifier";
-import { ReadableState } from "./ReadableState";
 import { SerializationCfg } from "./SerializationCfg";
-import { SettableState } from "./SettableState";
+import { SettableState } from "./state";
 import { StateBase } from "./StateBase";
 import { StateRecord } from "./StateRecord";
 import { ValueStore } from "./ValueStore";
@@ -94,7 +92,7 @@ export class DataStore {
         this.serialized.set(state.key, mode);
         const deps = store.upDependencies;
         let record: StateRecord;
-        const value = store.promise.current();
+        const value = store.get().current();
         switch (value.state) {
             case "pending":
                 if (last) {

@@ -1,7 +1,8 @@
 import { EffectFunction, StateEffect } from "../effect";
 import { EffectTrigger } from "../EffectTrigger";
 import { FutureValue } from "../FutureValue";
-import { SettableState } from "../SettableState";
+import { SettableState } from "../state";
+import { isFunction } from "../utils";
 
 export interface UrlCodec<T> {
     apply(url: URL, data: T): URL;
@@ -35,7 +36,7 @@ export namespace UrlSyncEffect {
         const effectSubscribe: EffectFunction<T> = (params) => {
             if (params.init) {
                 const url = params.ssr
-                 ? (typeof ssrInit === "function" ? ssrInit() : ssrInit)
+                 ? (isFunction(ssrInit) ? ssrInit() : ssrInit)
                  : new URL(window.location.href);
                 if (url) params.init(FutureValue.tryValue(() => codec.parse(url)));
             }

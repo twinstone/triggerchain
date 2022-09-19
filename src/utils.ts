@@ -9,3 +9,7 @@ export function assert<T>(v: T, msg?: string): NonNullable<T> {
 export function fail(msg?: string): never {
   throw new Error(msg || "Should not happen");
 }
+
+export function isFunction<D>(v: D | (() => D)): v is () => D {
+  return v && typeof v === "function";
+}

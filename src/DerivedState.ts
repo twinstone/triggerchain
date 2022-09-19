@@ -27,6 +27,6 @@ export class DerivedState<T> extends StateBase<T> {
             );
         }
         data.note(this);
-        return store.promise;
+        return store.get();
     }
 }

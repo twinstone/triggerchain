@@ -3,10 +3,10 @@ import { ReadAccess, ReduceAccess } from "./access";
 import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureValue } from "./FutureValue";
-import { ReadableState } from "./ReadableState";
 import { StateBase } from "./StateBase";
 import { StateAccess } from "./StateAccess";
 import { ValueStore } from "./ValueStore";
+import { ReadableState } from "./state";
 
 interface UseRecord<T> {
     resource: FutureResource<T>;
