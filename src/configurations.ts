@@ -2,6 +2,7 @@ import { DerivedReduceAccess, ReadAccess, ReduceAccess, WriteAccess } from "./ac
 import { StateEffect } from "./effect";
 import { FutureMaterial, MaybeFutureMaterial, MaybeFutureValue, MaybeSettledValue, PendingValue } from "./FutureValue";
 import { SerializationCfg } from "./SerializationCfg";
+import { ReadableState } from "./state";
 
 export interface StateCfgBase<T> {
     readonly comparator?: (v1: T, v2: T) => boolean;
@@ -11,7 +12,7 @@ export interface StateCfgBase<T> {
 }
 
 export interface InitializeStateCfg<T> {
-    readonly init?: MaybeFutureMaterial<T> | (() => MaybeFutureMaterial<T>);
+    readonly init?: MaybeFutureMaterial<T> | (() => MaybeFutureMaterial<T>) | ReadableState<T>;
 }
 
 export interface BasicStateCfg<T> extends StateCfgBase<T>, InitializeStateCfg<T> {

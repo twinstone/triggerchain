@@ -1,5 +1,5 @@
 import { DependencyList } from "react";
-import { ReadAccess, ReduceAccess } from "./access";
+import { DerivedReduceAccess, ReadAccess, ReduceAccess } from "./access";
 import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureValue } from "./FutureValue";
@@ -113,6 +113,11 @@ export class StateAccessWithDeps extends StateAccess {
             getValue: (s) => this.getValue(s),
         };
         return Object.assign(access, rest);
+    }
+
+    public toDerivedReadAccess(): DerivedReduceAccess {
+        const access = this.toReadAccess();
+        return access;
     }
 
 }

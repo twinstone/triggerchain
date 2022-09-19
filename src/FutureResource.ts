@@ -1,5 +1,5 @@
 import { FutureMaterial, FutureValue, PendingValue, SettledValue } from "./FutureValue";
-import { cancelPromise, isPromiseCanceled } from "./promiseTools";
+import { cancelPromise, isPromiseCanceled, makeCancelable } from "./promiseTools";
 
 export interface FutureResource<T> {
     current(): FutureValue<T>;
@@ -32,19 +32,16 @@ export namespace FutureResource {
 
     export function fromPending<T>(value: Promise<T> | PendingValue<T>): FutureResource<T> {
         const fv = value instanceof Promise? FutureValue.fromPromise<T>(value) : value;
-        const prom = fv.promise
-            .then((res) => {ret = FutureValue.fromValue(res); return res;})
-            .catch((err) => {ret = FutureValue.fromError(err); throw err;});
-        const ret0 = FutureValue.fromPromise(prom);
-        let ret: FutureValue<T> = ret0;
-        let canceled = false;
+        const prom = fv.promise;
+        prom.then((res) => {ret = FutureValue.fromValue(res)}, (err) => {ret = FutureValue.fromError(err)});
+        makeCancelable(prom, () => cancelPromise(prom));
+        let ret: FutureValue<T> = fv;
         return {
             isCanceled() {
-                return canceled;
+                return isPromiseCanceled(prom);
             },
             cancel() {
-                canceled = true;
-                if (ret === ret0) cancelPromise(fv.promise);
+                cancelPromise(prom);
             },
             current() {
                 return ret;

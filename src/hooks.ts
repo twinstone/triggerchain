@@ -5,7 +5,7 @@ import { FutureResource } from "./FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
 import { fail, isFunction } from "./utils";
 import { StateAccess } from "./StateAccess";
-import { ReadableState, SettableState } from "./state";
+import { ReadableState, ReducingState, SettableState } from "./state";
 
 //TODO: useSyncExternalStore
 
@@ -45,6 +45,21 @@ export function useDataSetter<T>(state: SettableState<T>): (value: MaybeFutureMa
         state.set(store, value);
     }
     return ret;
+}
+
+export function useDataReducer<C>(state: ReducingState<any, C>): (command: C) => void {
+    const store =  useDataStore();
+    const ret = (command: C) => {
+        state.reduce(store, command);
+    }
+    return ret;
+}
+
+export function useDataReducingState<T, C>(state: ReducingState<T, C>): [value: T, setted: (value: MaybeFutureMaterial<T>) => void, reduce: (command: C) => void] {
+    const value = useDataValue(state);
+    const setter = useDataSetter(state);
+    const reducer = useDataReducer(state);
+    return [value, setter, reducer];
 }
 
 export function useDataCallback<A extends any[], R>(f: (access: CallbackAccess, ...args: A) => R, deps?: DependencyList): (...args: A) => R {

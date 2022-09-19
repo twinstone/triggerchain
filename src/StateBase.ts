@@ -3,11 +3,13 @@ import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
 import { FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
 import { SerializationCfg } from "./SerializationCfg";
-import { ReadableState } from "./state";
+import { isReadableState, ReadableState, stateTag } from "./state";
 import { isFunction } from "./utils";
 
 
 export abstract class StateBase<T> implements ReadableState<T> {
+
+    public abstract readonly [stateTag]: "readable" | "settable" | "reducing";
 
     protected constructor(public readonly key: string, public readonly hmrToken: object) {
     }
@@ -20,9 +22,13 @@ export abstract class StateBase<T> implements ReadableState<T> {
         return this.cfg.pickler;
     }
 
-    protected computeInit(): MaybeFutureValue<T> {
+    protected computeInit(data: DataStore): MaybeFutureValue<T> {
         const cfg = this.initCfg();
         if (!cfg.init) return FutureValue.noValue;
+        if (isReadableState(cfg.init)) {
+            const res = cfg.init.get(data);
+            return res.current();
+        }
         const v = isFunction(cfg.init) ? FutureValue.tryMaybeFutureValue(cfg.init) : FutureValue.wrapMaybe(cfg.init);
         return v;
     }
@@ -30,7 +36,7 @@ export abstract class StateBase<T> implements ReadableState<T> {
     public get(data: DataStore): FutureResource<T> {
         const store = data.findWithCached<T>(this.key, this.cfg.pickler);
         if (store.shouldRecompute) {
-            const init = this.computeInit();
+            const init = this.computeInit(data);
             if (store.isInit && FutureValue.hasNoValue(init) && data.ssr) {
                 throw new Error(`State ${this.key} was not set and there is no way to initialize it`);
             }

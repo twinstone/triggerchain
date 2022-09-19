@@ -12,25 +12,25 @@ export interface CancelablePromise<T> extends Promise<T> {
 }
 
 export function makeCancelable<T>(promise: Promise<T>, cancel: () => void, state: () => boolean): CancelablePromise<T>;
-export function makeCancelable<T>(promise: Promise<T>, abort: AbortController): CancelablePromise<T>;
+export function makeCancelable<T>(promise: Promise<T>, cancel: AbortController): CancelablePromise<T>;
+export function makeCancelable<T>(promise: Promise<T>, cancel: () => void): CancelablePromise<T>;
 export function makeCancelable<T>(promise: Promise<T>): CancelablePromise<T>;
-export function makeCancelable<T>(promise: Promise<T>, abort?: AbortController | (() => void), state?: () => boolean): CancelablePromise<T> {
+export function makeCancelable<T>(promise: Promise<T>, cancel?: AbortController | (() => void), state?: () => boolean): CancelablePromise<T> {
     if (isCancelablePromise(promise)) return promise;
     let c;
     let s;
-    if (!abort) {
-        let canceled = false;
+    let canceled = false;
+    if (!cancel) {
         c = () => {canceled = true;};
         s = () => canceled;
-    } else if (abort instanceof AbortController) {
-        c = () => abort.abort(new CancelError());
-        s = () => abort.signal.aborted;
+    } else if (cancel instanceof AbortController) {
+        c = () => cancel.abort(new CancelError());
+        s = () => cancel.signal.aborted;
     } else if (state) {
-        c = abort;
+        c = cancel;
         s = state;
     } else {
-        let canceled = false;
-        c = () => {canceled = true; abort();};
+        c = () => {canceled = true; cancel();};
         s = () => canceled;
     }
     return Object.assign(promise, {[cancelSymbol]: c, [cancelStateSymbol]: s});

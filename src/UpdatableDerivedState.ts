@@ -1,11 +1,13 @@
 import { UpdatableDerivedStateCfg } from "./configurations";
 import { DataStore } from "./DataStore";
-import { DerivedState } from "./DerivedState";
+import { DerivedStateBase } from "./DerivedStateBase";
 import { FutureValue, MaybeFutureMaterial } from "./FutureValue";
-import { SettableState } from "./state";
+import { SettableState, stateTag } from "./state";
 import { StateAccess } from "./StateAccess";
 
-export class UpdatableDerivedState<T> extends DerivedState<T> implements SettableState<T> {
+export class UpdatableDerivedState<T> extends DerivedStateBase<T> implements SettableState<T> {
+    
+    public readonly [stateTag] = "settable";
     
     public constructor(key: string, hmrToken: object, protected readonly cfg: UpdatableDerivedStateCfg<T>) {
         super(key, hmrToken, cfg);

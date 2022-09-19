@@ -117,13 +117,13 @@ export class ValueStore<T> {
         );
     }
     
-    public loop(src: (last: unknown, err?: unknown) => FutureMaterial<T>, restart?: () => void, initLast?: unknown) {
+    public loop(src: () => FutureMaterial<T>, restart?: () => void) {
         this.assertSettable();
-        this.loopInternal(src, restart, initLast);
+        this.loopInternal(src, restart);
     }
 
-    protected loopInternal(src: (last: unknown, err?: unknown) => FutureMaterial<T>, restart: (() => void) | undefined, res: unknown, err?: unknown) {
-        const fv = FutureValue.tryFutureValue(() => src(res, err));
+    protected loopInternal(src: () => FutureMaterial<T>, restart: (() => void) | undefined) {
+        const fv = FutureValue.tryFutureValue(src);
         if (fv.state === "error" && fv.error instanceof Promise) {
             this.state = "pending";
             this.restart = restart;
@@ -132,7 +132,7 @@ export class ValueStore<T> {
                 cancel: () => cancelPromise(p),
                 isCanceled: () => isPromiseCanceled(p),
             }
-            this.settle(p, (v) => this.loopInternal(src, restart, v), (e) => this.loopInternal(src, restart, undefined, e));
+            this.settle(p, () => this.loopInternal(src, restart), () => this.loopInternal(src, restart));
         } else {
             this.state = "invalid"; //prevent repeated invalidation
             this.set(fv, restart);
