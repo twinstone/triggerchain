@@ -1,10 +1,11 @@
-import { InitializeStateCfg, StateCfgBase } from "./configurations";
-import { DataStore } from "./DataStore";
-import { FutureResource } from "./FutureResource";
-import { FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
-import { SerializationCfg } from "./SerializationCfg";
-import { isReadableState, ReadableState, stateTag } from "./state";
-import { isFunction } from "./utils";
+import { InitializeStateCfg, StateCfgBase } from "../configurations";
+import { DataStore } from "../DataStore";
+import { FutureResource } from "../FutureResource";
+import { FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "../FutureValue";
+import { SerializationCfg } from "../SerializationCfg";
+import { isReadableState, ReadableState, stateTag } from "../state";
+import { isFunction } from "../utils";
+import { ValueStore } from "../ValueStore";
 
 
 export abstract class StateBase<T> implements ReadableState<T> {
@@ -53,12 +54,15 @@ export abstract class StateBase<T> implements ReadableState<T> {
         }
     }
 
-    protected setInternal(data: DataStore, v: MaybeFutureMaterial<T>): void {
-        const store = data.find<T>(this.key, true);
-        if (!store.shouldRecompute) store.invalidate(true);
-        const value = FutureValue.wrapMaybe(v);
-        store.set(value);
-        data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
+    protected setInternal(data: DataStore, store: ValueStore<T>, v: MaybeFutureMaterial<T>): void {
+        data.startBatch();
+        try {
+            if (!store.shouldRecompute) store.invalidate(true);
+            const value = FutureValue.wrapMaybe(v);
+            store.set(value);
+        } finally {
+            data.endBatch();
+        }
     }
 
     

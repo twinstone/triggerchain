@@ -1,9 +1,6 @@
-import { DerivedStateCfg, InitializeStateCfg } from "./configurations";
-import { DataStore } from "./DataStore";
+import { DerivedStateCfg } from "../configurations";
+import { stateTag } from "../state";
 import { DerivedStateBase } from "./DerivedStateBase";
-import { FutureResource } from "./FutureResource";
-import { stateTag } from "./state";
-import { StateAccessWithDeps } from "./StateAccessWithDeps";
 
 export class DerivedState<T> extends DerivedStateBase<T> {
     

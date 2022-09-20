@@ -1,7 +1,7 @@
-import { InitializeStateCfg, ReducingStateCfg } from "./configurations";
-import { FutureMaterial } from "./FutureValue";
+import { InitializeStateCfg, ReducingStateCfg } from "../configurations";
+import { FutureMaterial } from "../FutureValue";
 import { ReducingStateBase } from "./ReducingStateBase";
-import { StateAccessWithDeps } from "./StateAccessWithDeps";
+import { StateAccessWithDeps } from "../StateAccessWithDeps";
 
 export class BasicReducingState<T, C> extends ReducingStateBase<T, C> {
     

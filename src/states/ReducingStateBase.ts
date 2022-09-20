@@ -1,11 +1,10 @@
-import { InitializeStateCfg } from "./configurations";
-import { DataStore } from "./DataStore";
-import { FutureResource } from "./FutureResource";
-import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
-import { ReducingState, stateTag } from "./state";
-import { StateAccessWithDeps } from "./StateAccessWithDeps";
+import { DataStore } from "../DataStore";
+import { FutureResource } from "../FutureResource";
+import { ReducingState, stateTag } from "../state";
+import { StateAccessWithDeps } from "../StateAccessWithDeps";
+import { ValueStore } from "../ValueStore";
+import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "../FutureValue";
 import { StateBase } from "./StateBase";
-import { ValueStore } from "./ValueStore";
 
 export abstract class ReducingStateBase<T, C> extends StateBase<T> implements ReducingState<T, C> {
 
@@ -58,6 +57,8 @@ export abstract class ReducingStateBase<T, C> extends StateBase<T> implements Re
     public set(data: DataStore, v: MaybeFutureMaterial<T>): void {
         // See BasicState.set
         data.assertWrite(this);
-        this.setInternal(data, v);
+        const store = data.find<T>(this.key, true);
+        this.setInternal(data, store, v);
+        data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
     }
 }

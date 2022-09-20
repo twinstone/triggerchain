@@ -1,7 +1,7 @@
 import { EffectCancel } from "./effect";
 import { SerializationCfg } from "./SerializationCfg";
 import { SettableState } from "./state";
-import { StateBase } from "./StateBase";
+import { StateBase } from "./states/StateBase";
 import { StateRecord } from "./StateRecord";
 import { ValueStore } from "./ValueStore";
 

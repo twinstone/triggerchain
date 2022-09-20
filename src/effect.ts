@@ -1,7 +1,7 @@
 import { CallbackAccess } from "./access";
 import { EffectTrigger } from "./EffectTrigger";
 import { MaybeFutureValue, MaybeSettledValue } from "./FutureValue";
-import { StateBase } from "./StateBase";
+import { StateBase } from "./states/StateBase";
 
 export type EffectCancel = () => void;
 

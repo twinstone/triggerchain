@@ -3,7 +3,7 @@ import { DerivedReduceAccess, ReadAccess, ReduceAccess } from "./access";
 import { DataStore } from "./DataStore";
 import { FutureResource } from "./FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureValue } from "./FutureValue";
-import { StateBase } from "./StateBase";
+import { StateBase } from "./states/StateBase";
 import { StateAccess } from "./StateAccess";
 import { ValueStore } from "./ValueStore";
 import { ReadableState } from "./state";

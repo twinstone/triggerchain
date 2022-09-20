@@ -25,7 +25,7 @@ export function useDataValue<T>(state: ReadableState<T>): T {
 }
 
 export function useDataFutureValue<T>(state: ReadableState<T>): FutureValue<T> {
-    const store =  useDataStore();
+    const store = useDataStore();
     const [fv, setFv] = useState(() => state.get(store));
     useEffect(() => {
         function callback() {
@@ -34,8 +34,8 @@ export function useDataFutureValue<T>(state: ReadableState<T>): FutureValue<T> {
         }
         const cancel = state.subscribe(store, callback);
         return cancel;
-    }, [state.key]);
-    console.log(`Getting ${state.key}`, fv.current().state);
+    }, [state.key, store]);
+    console.log(`Getting ${state.key}: `, fv.current().state);
     return fv.current();
 }
 
@@ -102,7 +102,7 @@ export function useFutureResource<T, D>(init: D | (() => D), start: () => Future
 export function useFutureResource<T, D>(init: D | (() => D)): [current: MaybeFutureValue<T>, last: T | D, setter: (mat: FutureMaterial<T>) => void];
 export function useFutureResource<T>(): [current: MaybeFutureValue<T>, last: T | undefined, setter: (mat: FutureMaterial<T>) => void];
 /**
- * Use idiomatic `current.settledOr(last).toValue()` to retrieve value that current component should use for rendering or throw error.
+ * Use idiomatic `current.valueOr(last)` to retrieve value that current component should use for rendering or throw error.
  * @param init initial value set to 'last' component before first future value settles. Undefined when omitted.
  * @param start function that returns initial future value - use to start async computation when components renders for first time
  * @returns triple [current, last, setter] where:

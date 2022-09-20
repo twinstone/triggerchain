@@ -1,9 +1,9 @@
-import { UpdatableDerivedStateCfg } from "./configurations";
-import { DataStore } from "./DataStore";
+import { UpdatableDerivedStateCfg } from "../configurations";
+import { DataStore } from "../DataStore";
 import { DerivedStateBase } from "./DerivedStateBase";
-import { FutureValue, MaybeFutureMaterial } from "./FutureValue";
-import { SettableState, stateTag } from "./state";
-import { StateAccess } from "./StateAccess";
+import { FutureValue, MaybeFutureMaterial } from "../FutureValue";
+import { SettableState, stateTag } from "../state";
+import { StateAccess } from "../StateAccess";
 
 export class UpdatableDerivedState<T> extends DerivedStateBase<T> implements SettableState<T> {
     
