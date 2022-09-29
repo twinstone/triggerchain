@@ -35,6 +35,9 @@ export class ValueStore<T> {
      * @returns true if fiber was restarted (and state changed)
      */
     protected cancelFiber(skipRestart: boolean): boolean {
+        if (this.fiber && this.resource.isSettled) {
+            console.error(`Invalid state of ${this.key}, fiber exists but resource is settled`);
+        }
         if (this.fiber) {
             this.fiber.cancel();
             this.fiber = undefined;
@@ -50,8 +53,10 @@ export class ValueStore<T> {
             }
             return true;
         }
-        console.error(`Value Store ${this.key} has no restart function, cancelling main promise`);
-        this.resource.cancel();
+        if (!this.resource.isSettled) {
+            console.error(`Value Store ${this.key} has no restart function, cancelling main promise`);
+            this.resource.cancel();
+        }
         return false;
     }
 
