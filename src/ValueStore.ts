@@ -45,12 +45,12 @@ export class ValueStore<T> {
             this.state = "cancel";
             this.restart();
             if (this.state === "cancel") {
-                console.error("Restart function failed to set state");
+                console.error("Restart function failed to set value state for " + this.key);
                 this.state = prev;
             }
             return true;
         }
-        console.error("Value Store has no restart function, cancelling main promise");
+        console.error(`Value Store ${this.key} has no restart function, cancelling main promise`);
         this.resource.cancel();
         return false;
     }
@@ -63,7 +63,7 @@ export class ValueStore<T> {
     }
 
     protected assertSettable(): void {
-        if (!this.shouldRecompute) throw Error("Illegal store state: " + this.state);
+        if (!this.shouldRecompute) throw Error(`Illegal store ${this.key} state: ${this.state}`);
     }
 
     public setValue(v: T): void {
@@ -114,7 +114,7 @@ export class ValueStore<T> {
                 } else {
                     if (e instanceof CancelError) {}
                     else if ("name" in e && e["name"] === "AbortError") {}
-                    else console.warn("Error in canceled fiber", e);
+                    else console.warn("Error in canceled fiber of " + this.key, e);
                 }
             },
         );
@@ -162,13 +162,13 @@ export class ValueStore<T> {
         if (this.state === "invalid") return;
         console.log(`Invalidating ${this.key}. ${this.upDependencies.length} up-dependencies, ${this.downDependencies.length} down-dependencies, ${this.subscriptions.length} subscriptions.`);
         if (this.fiber && this.state !== "pending") {
-            console.error("Fiber in invalid state: " + this.state);
+            console.error(`Fiber of value ${this.key} in invalid state: ${this.state}`);
         }
         if (this.cancelFiber(skipRestart ?? false)) return;            
-        if (!this.resource.isSettled && this.state !== "init") {
-            console.error("Promise not settled, cancelling");
-            this.resource.cancel();
-        }
+        // if (!this.resource.isSettled && this.state !== "init") {
+        //     console.error(`Promise of ${this.key} not settled, cancelling`);
+        //     this.resource.cancel();
+        // }
         this.state = "invalid";
         if (this.resource.isSettled) {
             this.resource = new PromiseExt<T>(`${this.key}/${this.invalidCount++}`);
