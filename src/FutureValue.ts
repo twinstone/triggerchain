@@ -201,12 +201,11 @@ export namespace FutureValue {
     }
     
     export function fromError<T>(value: unknown): ErrorValue {
-        const prom = makeCancelable(Promise.reject(value));
         const ret: ErrorValue = {
            [futureValueTag]: true,
            state: "error",
            error: value,
-           toPromise: () => prom,
+           toPromise: () => makeCancelable(Promise.reject(value)),
            toValue: () => { throw value },
            isSettled: true,
            map: <R>(f: (v: never) => FutureMaterial<R>) => ret,
