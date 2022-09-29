@@ -8,7 +8,7 @@ import { cancelPromise, isPromiseCanceled, safeCancelable } from "./promiseTools
 export type ValueStoreState = "init" | "invalid" | "pending" | "settled" | "cancel";
 
 export class ValueStore<T> {
-    private readonly key: string;
+    public readonly key: string;
     private state: ValueStoreState;
     private resource: PromiseExt<T>;
     private fiber: Omit<FutureResource<T>, "current"> | undefined;
@@ -173,18 +173,10 @@ export class ValueStore<T> {
         if (this.resource.isSettled) {
             this.resource = new PromiseExt<T>(`${this.key}/${this.invalidCount++}`);
         }
-        this.data.startBatch();
-        try {
-            this.data.notify(this.subscriptions);
-            this.upDependencies = [];
-            const ddeps = this.downDependencies;
-            this.downDependencies = [];    
-            for (const ds of ddeps) {
-                ds.invalidate();
-            }
-        } finally {
-            this.data.endBatch();
-        }
+        this.upDependencies = [];
+        const ddeps = this.downDependencies;
+        this.downDependencies = [];    
+        this.data.notify(this.subscriptions, ddeps);
     }
 
     public addDependency(dep: string): void {

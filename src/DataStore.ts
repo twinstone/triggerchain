@@ -152,7 +152,37 @@ export class DataStore {
     }
 
     private batchCount = 0;
-    private batchNotifications: Array<() => void> = [];
+    private batchRunning: boolean = false;
+    private batchNotifications: Set<() => void> = new Set();
+    private batchDependencies: Map<string, ValueStore<any>> = new Map();
+
+    protected doNotifications() {
+        this.batchRunning = true;
+        try {
+            while (this.batchDependencies.size > 0) {
+                const deps = this.batchDependencies;
+                this.batchDependencies = new Map();
+                for (const vs of deps.values()) {
+                    try {
+                        vs.invalidate();
+                    } catch (err) {
+                        console.error("Error during invalidation " + vs.key, err);
+                    }
+                }
+            }
+        } finally {
+            this.batchRunning = false;
+        }
+        const nots = this.batchNotifications;
+        this.batchNotifications = new Set();
+        for (const n of nots.values()) {
+            try {
+                n();
+            } catch (err) {
+                console.error("Error during notification", err);
+            }
+        }
+    }
 
     /**
      * Start accumulating notifications
@@ -165,25 +195,15 @@ export class DataStore {
         if (!this.batchCount) throw new Error("Batch has not started");
         this.batchCount--;
         if (!this.batchCount) {
-            try {
-                this.notify(this.batchNotifications);
-            } finally {
-                this.batchNotifications = [];
-            }
+            this.doNotifications();
         }
     }
 
-    public notify(nots: Array<() => void>) {
-        if (this.batchCount) {
-            this.batchNotifications = this.batchNotifications.concat(nots);
-        } else {
-            nots.forEach(s => {
-                try {
-                    s();
-                } catch (e) {
-                    console.error("Invalidation error", e);
-                }
-            });
+    public notify(nots: Array<() => void>, deps: ValueStore<any>[]) {
+        nots.forEach(n => this.batchNotifications.add(n));
+        deps.forEach(d => this.batchDependencies.set(d.key, d));
+        if (this.batchCount === 0 && !this.batchRunning) {
+            this.doNotifications();
         }
     }
 
