@@ -18,7 +18,7 @@ export class ValueStore<T> {
     public upDependencies: Array<string>; //Only for SSR
     private downDependencies: Array<ValueStore<any>>;
     private invalidCount = 0;
-    public lastSettled: MaybeSettledValue<T> = FutureValue.noValue;
+    public lastSettled: MaybeSettledValue<T> = FutureValue.noValue();
 
     public constructor(private readonly data: DataStore, key: string) {
         this.key = key;
@@ -86,7 +86,7 @@ export class ValueStore<T> {
         switch (v.state) {
             case "nothing":
                 this.invalidate(true);
-                this.lastSettled = FutureValue.noValue;
+                this.lastSettled = FutureValue.noValue();
                 break;
             case "error":
                 this.setError(v.error);
@@ -112,7 +112,9 @@ export class ValueStore<T> {
                 if (current === this.fiber) {
                     fn(FutureValue.fromError(e))
                 } else {
-                    if (!(e instanceof CancelError)) console.warn("Error in canceled fiber", e);
+                    if (e instanceof CancelError) {}
+                    else if ("name" in e && e["name"] === "AbortError") {}
+                    else console.warn("Error in canceled fiber", e);
                 }
             },
         );

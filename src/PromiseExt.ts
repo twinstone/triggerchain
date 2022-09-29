@@ -18,7 +18,11 @@ export class PromiseExt<T> implements FutureResource<T> {
             this.rej = rej;
         });
         (this.prom as any).id = id;
-        this.future = FutureValue.fromPromise(makeCancelable(this.prom, () => this.cancel(), () => this.isCanceled()));
+        //Do not allow to cancel the promise outside this class
+        //The promise represents pending calculation not resource counsumption.
+        //Real work is done in fibers, which are cancelled during invalidation
+        //TODO consider to cancel current fiber
+        this.future = FutureValue.fromPromise(makeCancelable(this.prom));
     }
 
     isCanceled(): boolean {
@@ -36,7 +40,6 @@ export class PromiseExt<T> implements FutureResource<T> {
         if (this.done) {
             throw new Error("Promise already settled or connected");
         }
-        this.done = true;
     }
 
     public get promise(): Promise<T> {
@@ -53,6 +56,7 @@ export class PromiseExt<T> implements FutureResource<T> {
     }
 
     private resolveInternal(v: T) {
+        this.done = true;
         this.future = FutureValue.fromValue(v);
         (this.res ?? fail("Too early"))(v);
     }
@@ -63,12 +67,14 @@ export class PromiseExt<T> implements FutureResource<T> {
     }
 
     private rejectInternal(e: unknown) {
+        this.done = true;
         this.future = FutureValue.fromError(e);
         (this.rej ?? fail("Too early"))(e);
     }
 
     public connect(other: Promise<T>): void {
         this.assertDone();
+        this.done = true;
         other.then(
             v => this.resolveInternal(v),
             e => this.rejectInternal(e));

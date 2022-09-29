@@ -25,12 +25,12 @@ export abstract class StateBase<T> implements ReadableState<T> {
 
     protected computeInit(data: DataStore): MaybeFutureValue<T> {
         const cfg = this.initCfg();
-        if (!cfg.init) return FutureValue.noValue;
+        if (!("init" in cfg)) return FutureValue.noValue();
         if (isReadableState(cfg.init)) {
             const res = cfg.init.get(data);
             return res.current();
         }
-        const v = isFunction(cfg.init) ? FutureValue.tryMaybeFutureValue(cfg.init) : FutureValue.wrapMaybe(cfg.init);
+        const v = isFunction(cfg.init) ? FutureValue.tryMaybeFutureValue(cfg.init) : FutureValue.wrapMaybe(cfg.init!);
         return v;
     }
 

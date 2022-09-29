@@ -123,7 +123,7 @@ export function useFutureResource<T, D>(init?: D | (() => D), start?: () => Futu
         if (res) return () => res.cancel();
     }, [res]);
  
-    const [fv, last] = useFutureValue(res ? res.current() : FutureValue.noValue, init);
+    const [fv, last] = useFutureValue(res ? res.current() : FutureValue.noValue(), init);
 
     return [fv, last, mat => setRes(wrap(mat))];
 }

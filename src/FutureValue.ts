@@ -68,19 +68,39 @@ export type MaybeFutureMaterial<T> = T | Promise<T> | CancelablePromise<T> | May
 
 export namespace FutureValue {
 
-    export const noValue: NoValue = {
-        state: "nothing",
-        [futureValueTag]: true,
-        isSettled: false,
-        map: <R>(f: (v: never) => FutureMaterial<R>) => noValue,
-        toPromise: () => { throw new Error("No Value") },
-        toValue: () => { throw new Error("No Value") },
-        valueOr: <R>(def: R) => def,
-        settled: () => { throw new Error("No Value") },
-        settledOr: <R>(other: R | SettledValue<R>) => isSettled(other) ? other : fromValue<R>(other),
-        or: <R>(other: FutureMaterial<R>) => wrap<R>(other),
-        then: <R>(f: (settled: SettledValue<never>) => FutureMaterial<R>) => noValue,
-    };
+    function createNoValue(): NoValue {
+        const ret: NoValue = {
+            state: "nothing",
+            [futureValueTag]: true,
+            isSettled: false,
+            map: <R>(f: (v: never) => FutureMaterial<R>) => ret,
+            toPromise: () => { throw new Error("No Value") },
+            toValue: () => { throw new Error("No Value") },
+            valueOr: <R>(def: R) => def,
+            settled: () => { throw new Error("No Value") },
+            settledOr: <R>(other: R | SettledValue<R>) => isSettled(other) ? other : fromValue<R>(other),
+            or: <R>(other: FutureMaterial<R>) => wrap<R>(other),
+            then: <R>(f: (settled: SettledValue<never>) => FutureMaterial<R>) => ret,
+        };
+        return ret;
+    }
+
+    const simpleNoValue: NoValue = createNoValue();
+
+    export function noValue(): NoValue;
+    /**
+     * Escape hatch that allow communication with effects. Adding data no noValue may
+     * be detected in effect and effect may act accordingly. Rest of the library will
+     * treat returned object as ordinary noValue.
+     * @param mixin 
+     */
+    export function noValue<A extends object>(mixin: A): NoValue & A;
+    export function noValue<A extends object>(mixin?: A): NoValue & A {
+        if (!arguments.length) return simpleNoValue as any;
+        if (mixin === undefined || mixin === null) return createNoValue() as any;
+        if ("state" in mixin && (mixin as any)["state"] !== "nothing") throw Error("Can not set state");
+        return Object.assign(createNoValue(), mixin);
+    }
 
     export function hasNoValue(v: unknown): v is NoValue {
         return isMaybe(v) && v.state === "nothing";
