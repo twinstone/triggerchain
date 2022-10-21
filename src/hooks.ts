@@ -55,10 +55,20 @@ export function useDataSetter<T>(state: SettableState<T>): (value: MaybeFutureMa
  * To prevent errors in SSR, this hook must be used before any attempt to read value of the state.
  * Value set by this hook takes precence over state initializer (if exists).
  * @param state state being changed
+ * @param value value that should be set to the state
+ * @param cmp comparator of actual value and target value. Both current and provided value must be settled, otherwise comparison is skipped.
  * @returns function that initializes / changes the state in actual data store context
  */
-export function useDataInit<T>(state: InitializableState<T>, value: FutureMaterial<T>): void {
+export function useDataInit<T>(state: InitializableState<T>, value: FutureMaterial<T>, cmp?: (t1: T, t2: T) => boolean): void {
     const store =  useDataStore();
+    if (cmp) {
+        const res = store.find(state.key);
+        if (res) {
+            const fv1 = res.get().current();
+            const fv2 = FutureValue.wrap(value);
+            if (fv1.state === "present" && fv2.state === "present" && cmp(fv1.value as T, fv2.value)) return;
+        }
+    }
     state.init(store, value);
 }
 

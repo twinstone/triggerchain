@@ -8,30 +8,40 @@ interface InitDataStoreProps {
     ssr?: boolean;
     init?: (access: InitAccess) => void;
     ssrCached?: React.MutableRefObject<() => string>;
+    ssrPass?: boolean;
 }
 
-export class InitDataStore extends React.Component<PropsWithChildren<InitDataStoreProps>, {dataStore: DataStore | undefined}> {
+export class InitDataStore extends React.Component<PropsWithChildren<InitDataStoreProps>> {
     
+    declare context: React.ContextType<typeof DataStoreContext>;
+
+    private dataStore: DataStore | undefined;
+
     public constructor(props: PropsWithChildren<InitDataStoreProps>) {
         super(props);
         this.state = {dataStore: undefined};
     }
 
     public componentDidMount() {
-        const store = InitDataStore.createDataStore(this.props);
-        this.setState({dataStore: store});
     }
 
     public componentWillUnmount() {
-        if (this.state.dataStore) {
-            this.state.dataStore.dispose();
+        if (this.dataStore && this.dataStore !== this.context) {
+            this.dataStore.dispose();
         }
+        this.dataStore = undefined;
     }
 
     public render(): React.ReactNode {
-        if (!this.state.dataStore) return null;
+        if (!this.dataStore) {
+            if (this.context && this.props.ssrPass) {
+                this.dataStore = this.context;
+            } else {
+                this.dataStore = InitDataStore.createDataStore(this.props);
+            }
+        }
         return (
-            <DataStoreContext.Provider value={this.state.dataStore}>
+            <DataStoreContext.Provider value={this.dataStore}>
                 {this.props.children}
             </DataStoreContext.Provider>
         );
@@ -48,7 +58,8 @@ export class InitDataStore extends React.Component<PropsWithChildren<InitDataSto
         }
         return datastore;
     }
-    
+ 
+    public static readonly contextType = DataStoreContext;
 }
 
 

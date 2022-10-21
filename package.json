@@ -3,6 +3,7 @@
   "main": "./src/index.ts",
   "module": "./src/index.ts",
   "types": "./src/index.ts",
+  "type": "module",
   "scripts": {
     "build": "tsup src/index.ts --sourcemap --format cjs,esm --dts --clean",
     "tsc": "tsc --noEmit",
