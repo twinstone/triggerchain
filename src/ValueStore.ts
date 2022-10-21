@@ -210,4 +210,12 @@ export class ValueStore<T> {
     public get shouldRecompute(): boolean {
         return this.state === "invalid" || this.state === "init" || this.state === "cancel";
     }
+
+    public assertWrite(init: boolean): void {
+        if (this.data.ssr) {
+            if (!init || this.state !== "init") {
+                throw new Error(`Cannot write to state ${this.key} in SSR mode`);
+            }
+        }
+    }
 }

@@ -1,6 +1,6 @@
 import { DependencyList } from "react";
 import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
-import { ReadableState, ReducingState, SettableState } from "./state";
+import { InitializableState, ReadableState, ReducingState, SettableState } from "./state";
 
 
 export interface ValueAccess {
@@ -35,7 +35,7 @@ export interface DerivedReduceAccess extends ReadAccess {
 }
 
 export interface InitAccess {
-    set: <T>(state: SettableState<T>, value: MaybeFutureMaterial<T>) => void;
+    init: <T>(state: InitializableState<T>, value: FutureMaterial<T>) => void;
 }
 
 export interface WriteAccess extends InitAccess {

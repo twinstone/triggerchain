@@ -40,8 +40,8 @@ export abstract class ReducingStateBase<T, C> extends StateBase<T> implements Re
     }
 
     public reduce(data: DataStore, command: C): void {
-        data.assertWrite(this);
         const store = data.findWithCached(this.key, this.cfg.pickler);
+        store.assertWrite(false);
         if (!store.shouldRecompute) store.invalidate(true);
         const last = this.getLast(data, store);
         this.doReduce(
@@ -54,11 +54,4 @@ export abstract class ReducingStateBase<T, C> extends StateBase<T> implements Re
         data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
     }
 
-    public set(data: DataStore, v: MaybeFutureMaterial<T>): void {
-        // See BasicState.set
-        data.assertWrite(this);
-        const store = data.find<T>(this.key, true);
-        this.setInternal(data, store, v);
-        data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
-    }
 }

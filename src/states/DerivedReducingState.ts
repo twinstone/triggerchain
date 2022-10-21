@@ -4,6 +4,7 @@ import { FutureResource } from "../FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureMaterial } from "../FutureValue";
 import { ReducingStateBase } from "./ReducingStateBase";
 import { StateAccessWithDeps } from "../StateAccessWithDeps";
+import { ValueStore } from "../ValueStore";
 
 export class DerivedReducingState<T, C> extends ReducingStateBase<T, C> {
     public constructor (key: string, hmrToken: object, protected readonly cfg: DerivedReducingStateCfg<T, C>) {
@@ -35,9 +36,7 @@ export class DerivedReducingState<T, C> extends ReducingStateBase<T, C> {
         return store.get();
     }
 
-    public set(data: DataStore, v: MaybeFutureMaterial<T>): void {
-        data.assertWrite(this);
-        const store = data.find<T>(this.key, true);
+    protected setInternal(data: DataStore, store: ValueStore<T>, v: MaybeFutureMaterial<T>): void {
         data.startBatch();
         try {
             if (!store.shouldRecompute) store.invalidate(true);
@@ -58,7 +57,6 @@ export class DerivedReducingState<T, C> extends ReducingStateBase<T, C> {
         } finally {
             data.endBatch();
         }
-        data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
     }
 
 }

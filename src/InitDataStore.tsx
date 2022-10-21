@@ -43,7 +43,6 @@ export class InitDataStore extends React.Component<PropsWithChildren<InitDataSto
             const init = props.init;
             StateAccess.withAccess(datastore, (access) => init(access.toInitAccess()));
         }
-        datastore.initialize();
         if (props.ssrCached) {
             props.ssrCached.current = () => datastore.serializeRecords(true);
         }

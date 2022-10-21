@@ -1,7 +1,7 @@
 import { InitializeStateCfg, StateCfgBase } from "../configurations";
 import { DataStore } from "../DataStore";
 import { FutureResource } from "../FutureResource";
-import { FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "../FutureValue";
+import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "../FutureValue";
 import { SerializationCfg } from "../SerializationCfg";
 import { isReadableState, ReadableState, stateTag } from "../state";
 import { isFunction } from "../utils";
@@ -10,7 +10,7 @@ import { ValueStore } from "../ValueStore";
 
 export abstract class StateBase<T> implements ReadableState<T> {
 
-    public abstract readonly [stateTag]: "readable" | "settable" | "reducing";
+    public abstract readonly [stateTag]: "readable" | "settable" | "initializable" | "reducing";
 
     protected constructor(public readonly key: string, public readonly hmrToken: object) {
     }
@@ -39,7 +39,7 @@ export abstract class StateBase<T> implements ReadableState<T> {
         if (store.shouldRecompute) {
             const init = this.computeInit(data);
             if (store.isInit && FutureValue.hasNoValue(init) && data.ssr) {
-                throw new Error(`State ${this.key} was not set and there is no way to initialize it`);
+                throw new Error(`State ${this.key} was not set and there is no way to initialize it. Use Data Store initialization or init hook.`);
             }
             store.set(init);
         } 
@@ -63,6 +63,20 @@ export abstract class StateBase<T> implements ReadableState<T> {
         } finally {
             data.endBatch();
         }
+    }
+
+    public set(data: DataStore, v: MaybeFutureMaterial<T>): void {
+        const store = data.find<T>(this.key, true);
+        store.assertWrite(false);
+        this.setInternal(data, store, v);
+        data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
+    }
+
+    public init(data: DataStore, v: FutureMaterial<T>): void {
+        const store = data.find<T>(this.key, true);
+        store.assertWrite(true);
+        this.setInternal(data, store, v);
+        data.note(this); //Noting has meaning only during SSR, and only time the state can be set is during initialization
     }
 
     

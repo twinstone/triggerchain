@@ -18,7 +18,6 @@ export class DataStore {
     private serialized = new Map<string, "full" | "deps">();
     private recorderScriptEmited: boolean = false;
     private notes: Array<StateBase<any>> = [];
-    private initialized: boolean = false;
 
     /**
      * 
@@ -63,15 +62,6 @@ export class DataStore {
         return store;
     }
 
-    public assertWrite(state: SettableState<any>): void {
-        if (this.ssr && this.initialized) {
-            throw new Error(`Cannot write to state ${state.key} in SSR mode`);
-        }
-    }
-
-    public initialize(): void {
-        this.initialized = true;
-    }
 
     //TODO Note automatically in find methods?
     public note(state: StateBase<any>) {

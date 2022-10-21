@@ -1,13 +1,13 @@
 import { CallbackAccess, InitAccess, WriteAccess } from "./access";
 import { DataStore } from "./DataStore";
-import { FutureValue, MaybeFutureMaterial } from "./FutureValue";
-import { ReadableState, ReducingState, SettableState } from "./state";
+import { FutureMaterial, FutureValue, MaybeFutureMaterial } from "./FutureValue";
+import { InitializableState, ReadableState, ReducingState, SettableState } from "./state";
 
 export class StateAccess {
 
     private locked: boolean = false;
 
-    public constructor(protected readonly data: DataStore) {
+    public constructor(protected readonly data: DataStore, protected readonly assertSettable?: (s: ReadableState<any>) => void) {
     }
 
     public lock(): void {
@@ -30,11 +30,18 @@ export class StateAccess {
 
     public set<T>(s: SettableState<T>, v: MaybeFutureMaterial<T>): void {
         this.assertUnlocked();
+        this.assertSettable?.(s);
         s.set(this.data, v);
+    }
+
+    public init<T>(s: InitializableState<T>, v: FutureMaterial<T>): void {
+        this.assertUnlocked();
+        s.init(this.data, v);
     }
 
     public reduce<T, C>(state: ReducingState<T, C>, command: C): void {
         this.assertUnlocked();
+        this.assertSettable?.(state);
         state.reduce(this.data, command);
     }
 
@@ -45,7 +52,7 @@ export class StateAccess {
 
     public toInitAccess(): InitAccess {
         return {
-            set: (s, v) => this.set(s, v),
+            init: (s, v) => this.init(s, v),
         };
     }
 
@@ -66,8 +73,9 @@ export class StateAccess {
         });
     }
 
-    public static withAccess<T>(data: DataStore, block: (access: StateAccess) => T): T {
-        const access = new StateAccess(data);
+    //TODO add more robust validation. Chain of sets must not form cycle.
+    public static withAccess<T>(data: DataStore, block: (access: StateAccess) => T, assertSettable?: (s: ReadableState<any>) => void): T {
+        const access = new StateAccess(data, assertSettable);
         data.startBatch();
         try {
             return block(access);

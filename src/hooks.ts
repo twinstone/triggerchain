@@ -5,7 +5,7 @@ import { FutureResource } from "./FutureResource";
 import { FutureMaterial, FutureValue, MaybeFutureMaterial, MaybeFutureValue } from "./FutureValue";
 import { fail, isFunction } from "./utils";
 import { StateAccess } from "./StateAccess";
-import { ReadableState, ReducingState, SettableState } from "./state";
+import { InitializableState, ReadableState, ReducingState, SettableState } from "./state";
 
 //TODO: useSyncExternalStore
 
@@ -45,6 +45,21 @@ export function useDataSetter<T>(state: SettableState<T>): (value: MaybeFutureMa
         state.set(store, value);
     }
     return ret;
+}
+
+/**
+ * Sets value of a state, checking if its happens only one time in SSR mode. This hooks is intended for
+ * scenarios when particular state can not be initialized globally (i.e. its value is derived from component property).
+ * Is SSR mode, the hooks checks that state value was not set yet, othewise it throws exception. In client mode
+ * the hook works same way as calling function created by `useDataSetter`, but it can not reset the state by setting state to FutureValue.NoValue.
+ * To prevent errors in SSR, this hook must be used before any attempt to read value of the state.
+ * Value set by this hook takes precence over state initializer (if exists).
+ * @param state state being changed
+ * @returns function that initializes / changes the state in actual data store context
+ */
+export function useDataInit<T>(state: InitializableState<T>, value: FutureMaterial<T>): void {
+    const store =  useDataStore();
+    state.init(store, value);
 }
 
 export function useDataReducer<C>(state: ReducingState<any, C>): (command: C) => void {

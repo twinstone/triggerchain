@@ -6,7 +6,7 @@ import { DerivedState } from "./states/DerivedState";
 import { FutureMaterial, SettledValue } from "./FutureValue";
 import { Qualifier } from "./Qualifier";
 import { SelectorState } from "./states/SelectorState";
-import { ReadableState, ReducingState, SettableState } from "./state";
+import { InitializableState, ReadableState, ReducingState, SettableState } from "./state";
 import { UpdatableDerivedState } from "./states/UpdatableDerivedState";
 
 const names = new Set<string>();
@@ -18,7 +18,7 @@ function checkKey(key: string) {
     names.add(key);
 }
 
-export function basicStateGroup<T, Q extends Qualifier>(key: string, cfg: (q: Q) => BasicStateCfg<T>): (q: Q) => SettableState<T> {
+export function basicStateGroup<T, Q extends Qualifier>(key: string, cfg: (q: Q) => BasicStateCfg<T>): (q: Q) => InitializableState<T> {
     checkKey(key);
     return q => {
         const qcfg = cfg(q);
@@ -27,7 +27,7 @@ export function basicStateGroup<T, Q extends Qualifier>(key: string, cfg: (q: Q)
     };
 }
 
-export function basicState<T>(key: string, cfg: BasicStateCfg<T>): SettableState<T> {
+export function basicState<T>(key: string, cfg: BasicStateCfg<T>): InitializableState<T> {
     checkKey(key);
     return new BasicState(key, cfg, cfg);
 }
